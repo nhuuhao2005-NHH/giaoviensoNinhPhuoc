@@ -115,7 +115,7 @@ function parsePlanForPreview(rawPlan: string) {
 
 export default function HomePage() {
   // Input states
-  const [subject, setSubject] = useState("Tin học và Công nghệ");
+  const [subject, setSubject] = useState("Tin học");
   const [grade] = useState("Lớp 3");
   const [lessonTitle, setLessonTitle] = useState("");
   const [duration, setDuration] = useState("1 tiết (35 phút)");
@@ -948,7 +948,8 @@ export default function HomePage() {
                   onChange={(e) => setSubject(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium"
                 >
-                  <option>Tin học và Công nghệ</option>
+                  <option>Tin học</option>
+                  <option>Công nghệ</option>
                   <option>Tiếng Việt</option>
                   <option>Toán</option>
                   <option>Tự nhiên và Xã hội</option>
