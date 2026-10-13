@@ -30,7 +30,7 @@ import {
   AI_STRAND_GROUPS,
   PRIMARY_EDTECH_TOOLS,
 } from "@/lib/digital-competency-framework";
-import { exportLessonToWord } from "@/lib/export-docx";
+import saveAs from "file-saver";
 
 
 interface PreviewActivity {
@@ -117,6 +117,7 @@ export default function HomePage() {
   // Input states
   const [subject, setSubject] = useState("Tin học");
   const [grade] = useState("Lớp 3");
+  const [tiet, setTiet] = useState("");
   const [lessonTitle, setLessonTitle] = useState("");
   const [duration, setDuration] = useState("1 tiết (35 phút)");
   const [infrastructureLevel, setInfrastructureLevel] = useState(
@@ -140,6 +141,7 @@ export default function HomePage() {
   const [activeAIStrand, setActiveAIStrand] = useState<string | null>(null);
 
   // File upload state
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState("");
   const [uploadedPlanContent, setUploadedPlanContent] = useState("");
   const [isReadingFile, setIsReadingFile] = useState(false);
@@ -153,6 +155,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [generatedPlan, setGeneratedPlan] = useState("");
+  const [generatedDocxBlob, setGeneratedDocxBlob] = useState<Blob | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [copied, setCopied] = useState(false);
   const [viewMode, setViewMode] = useState<"table" | "text">("table");
@@ -204,11 +207,12 @@ export default function HomePage() {
     );
   };
 
-  // File upload handler (.docx, .txt, .md)
+  // File upload handler (.docx, .pdf, .txt, .md)
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setUploadedFile(file);
     setUploadedFileName(file.name);
     setIsReadingFile(true);
     setErrorMsg("");
@@ -223,6 +227,11 @@ export default function HomePage() {
         if (!lessonTitle) {
           setLessonTitle(file.name.replace(/\.docx$/i, ""));
         }
+      } else if (file.name.endsWith(".pdf")) {
+        setUploadedPlanContent("[Tệp PDF đính kèm: " + file.name + "]");
+        if (!lessonTitle) {
+          setLessonTitle(file.name.replace(/\.pdf$/i, ""));
+        }
       } else {
         const text = await file.text();
         setUploadedPlanContent(text.trim());
@@ -232,30 +241,33 @@ export default function HomePage() {
       }
     } catch (err) {
       console.error(err);
-      setErrorMsg("Không thể đọc file. Vui lòng thử lại với file .docx hoặc .txt");
+      setErrorMsg("Không thể đọc file. Vui lòng thử lại với file .docx, .pdf hoặc .txt");
     } finally {
       setIsReadingFile(false);
     }
   };
 
   const handleRemoveUploadedFile = () => {
+    setUploadedFile(null);
     setUploadedFileName("");
     setUploadedPlanContent("");
+    setGeneratedDocxBlob(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // Submit generate
+  // Submit generate qua endpoint /api/khbd
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
 
-    if (!uploadedPlanContent.trim()) {
-      setErrorMsg("Vui lòng tải lên file Kế hoạch bài dạy (.docx hoặc .txt) cần tích hợp.");
+    if (!uploadedFile && !uploadedPlanContent.trim()) {
+      setErrorMsg("Vui lòng tải lên file Kế hoạch bài dạy (.docx, .pdf hoặc .txt) cần tích hợp.");
       return;
     }
 
     setLoading(true);
     setGeneratedPlan("");
+    setGeneratedDocxBlob(null);
     setActiveTab("result");
 
     const timer1 = setTimeout(() => setLoadingStep(1), 3000);
@@ -263,36 +275,58 @@ export default function HomePage() {
     const timer3 = setTimeout(() => setLoadingStep(3), 12000);
 
     try {
-      const res = await fetch("/api/generate-lesson", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          subject,
-          grade: "Lớp 3",
-          lessonTitle: lessonTitle || uploadedFileName.replace(/\.(docx|txt|md)$/i, ""),
-          duration,
-          learningObjectives,
-          infrastructureLevel,
-          integrateDigital,
-          integrateAI,
-          selectedNLS,
-          selectedAI,
-          teacherSuggestions,
-          uploadedPlanContent,
-          apiKey,
-        }),
+      const codes = selectedNLS.map((code) => {
+        const found = PRIMARY_DIGITAL_INDICATORS.find((i) => i.code === code);
+        return {
+          ma: code,
+          noi_dung: found ? found.description : "",
+        };
       });
 
-      const data = await res.json();
+      const formData = new FormData();
+      if (uploadedFile) {
+        formData.append("file", uploadedFile);
+      } else {
+        const textBlob = new Blob([uploadedPlanContent], { type: "text/plain" });
+        formData.append("file", textBlob, uploadedFileName || "giao_an.txt");
+      }
+      formData.append("mon", subject);
+      formData.append("tiet", tiet);
+      formData.append("codes", JSON.stringify(codes));
+      if (apiKey) formData.append("apiKey", apiKey);
+
+      const res = await fetch("/api/khbd", {
+        method: "POST",
+        body: formData,
+      });
+
       if (!res.ok) {
-        throw new Error(data.error || "Không thể tạo giáo án");
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error || "Không tạo được kế hoạch bài dạy, vui lòng thử lại.");
       }
 
-      setGeneratedPlan(data.lessonPlan);
+      const blob = await res.blob();
+      setGeneratedDocxBlob(blob);
+
+      // Tự động tải xuống file Word đúng chuẩn KHBD_output.docx
+      const safeName = `KHBD_${subject.replace(/\s+/g, "_")}${tiet ? `_Tiet_${tiet}` : ""}.docx`;
+      saveAs(blob, safeName);
+
+      // Đọc trích xuất text để hiển thị xem trước
+      try {
+        const mammoth = await import("mammoth");
+        const arrayBuffer = await blob.arrayBuffer();
+        const { value } = await mammoth.extractRawText({ arrayBuffer });
+        setGeneratedPlan(value);
+      } catch {
+        setGeneratedPlan(
+          "Kế hoạch bài dạy đã tạo thành công và đã tự động tải xuống máy tính của thầy/cô dưới dạng file Word (.docx)."
+        );
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Đã xảy ra lỗi";
       setErrorMsg(msg);
-      if (msg.includes("API Key")) {
+      if (msg.includes("API Key") || msg.includes("API key")) {
         setShowKeyModal(true);
       }
     } finally {
@@ -311,24 +345,15 @@ export default function HomePage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleExportDocx = async () => {
-    if (!generatedPlan) return;
+  const handleExportDocx = () => {
+    if (!generatedDocxBlob) return;
     setIsExporting(true);
     try {
-      let titleToExport = lessonTitle || uploadedFileName.replace(/\.(docx|txt|md)$/i, "");
-      if (!titleToExport) {
-        const match = generatedPlan.match(/BÀI(?:\s*\d*)?:\s*([^\n\r]+)/i);
-        titleToExport = match ? match[1].trim() : "Bai_day_Lop_3";
-      }
-      await exportLessonToWord({
-        lessonTitle: titleToExport,
-        subject,
-        grade: "Lớp 3",
-        content: generatedPlan,
-      });
+      const safeName = `KHBD_${subject.replace(/\s+/g, "_")}${tiet ? `_Tiet_${tiet}` : ""}.docx`;
+      saveAs(generatedDocxBlob, safeName);
     } catch (err) {
       console.error(err);
-      alert("Không thể xuất file Word. Vui lòng thử lại.");
+      alert("Không thể tải file Word. Vui lòng thử lại.");
     } finally {
       setIsExporting(false);
     }
@@ -938,38 +963,52 @@ export default function HomePage() {
             )}
 
             <form onSubmit={handleGenerate} className="space-y-4">
-              {/* 1. Môn học */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  1. Môn học Tiểu học (Lớp 3)
-                </label>
-                <select
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium"
-                >
-                  <option>Tin học</option>
-                  <option>Công nghệ</option>
-                  <option>Tiếng Việt</option>
-                  <option>Toán</option>
-                  <option>Tự nhiên và Xã hội</option>
-                  <option>Đạo đức</option>
-                  <option>Hoạt động trải nghiệm</option>
-                  <option>Âm nhạc</option>
-                  <option>Mĩ thuật</option>
-                  <option>Giáo dục thể chất</option>
-                </select>
+              {/* 1. Môn học & Tiết */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    1. Môn học Tiểu học
+                  </label>
+                  <select
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium"
+                  >
+                    <option>Tin học</option>
+                    <option>Công nghệ</option>
+                    <option>Tiếng Việt</option>
+                    <option>Toán</option>
+                    <option>Tự nhiên và Xã hội</option>
+                    <option>Đạo đức</option>
+                    <option>Hoạt động trải nghiệm</option>
+                    <option>Âm nhạc</option>
+                    <option>Mĩ thuật</option>
+                    <option>Giáo dục thể chất</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Tiết dạy (nếu có)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="VD: 1, 2..."
+                    value={tiet}
+                    onChange={(e) => setTiet(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium"
+                  />
+                </div>
               </div>
 
               {/* 2. Tải KHBD cần tích hợp */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  2. Tải KHBD cần tích hợp (File Word .docx hoặc .txt)
+                  2. Tải KHBD cần tích hợp (File Word .docx, .pdf hoặc .txt)
                 </label>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".docx,.txt,.md"
+                  accept=".docx,.pdf,.txt,.md"
                   onChange={handleFileUpload}
                   className="hidden"
                   id="khbd-upload"
@@ -1320,7 +1359,7 @@ export default function HomePage() {
                     <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-start space-x-2 text-emerald-800 text-xs">
                       <Check className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
                       <div>
-                        <strong>Kế hoạch bài dạy Lớp 3 chuẩn CV 2345 đã hoàn thành!</strong> Cấu trúc theo mẫu chuẩn <code>KHBD_MAU.docx</code>, tích hợp mã chỉ báo NLS &amp; AI và phân định Bảng 2 cột Hoạt động của GV &amp; HS. Bấm <strong>&quot;Tải Word (CV 2345)&quot;</strong> để nhận file in ấn.
+                        <strong>Kế hoạch bài dạy đã tạo thành công và tự động tải xuống máy tính của thầy/cô!</strong> Bố cục chuẩn file Word do <code>render-khbd.js</code> tạo ra với Bảng 2 cột Hoạt động của GV &amp; HS. Thầy/cô có thể bấm <strong>&quot;Tải Word (CV 2345)&quot;</strong> để tải lại file bất cứ lúc nào.
                       </div>
                     </div>
 

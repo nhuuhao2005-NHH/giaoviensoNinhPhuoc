@@ -1,0 +1,119 @@
+{
+  
+  "tiet": "2",
+  "bai": "3: SỬ DỤNG QUẠT ĐIỆN",
+  "ngay_soan": "10 /10 /2026",
+  "kien_thuc": [
+    "Biết sử dụng quạt điện đúng cách.",
+    "Nhận biết và phòng tránh được những tình huống mất an toàn khi sử dụng quạt điện."
+  ],
+  "nang_luc_so": [
+    {
+      "ma": "4.1.CB1a",
+      "noi_dung": "Nhận biết được cách bảo vệ thiết bị và nội dung số một cách đơn giản."
+    },
+    {
+      "ma": "4.3.CB1a",
+      "noi_dung": "Phân biệt được các cách thức đơn giản để tránh rủi ro và đe dọa đến sức khỏe thể chất và tinh thần khi sử dụng công nghệ số."
+    }
+  ],
+  "tich_hop_ai": [],
+  "do_dung_gv": "Ti vi / màn hình tương tác, video về cách sử dụng quạt điện đúng cách và an toàn.",
+  "do_dung_hs": "SGK, vở ghi; quạt bàn nhỏ (nếu thực hành trực tiếp).",
+  "hoat_dong": [
+    {
+      "ten": "Khởi động",
+      "thoi_gian_phut": 5,
+      "cac_buoc": [
+        {
+          "gv": "GV cho HS nghe và hát theo bài hát \"Đồ dùng bé yêu\" (mở trên ti vi / màn hình tương tác).",
+          "hs": "HS hát theo bài hát, vận động nhẹ theo nhạc."
+        },
+        {
+          "gv": "GV hỏi: Bài hát nhắc đến những đồ dùng nào? Quạt điện có quen thuộc với gia đình em không?",
+          "hs": "HS nêu tên các đồ dùng trong bài hát; chia sẻ về quạt điện ở nhà."
+        },
+        {
+          "gv": "GV hỏi: Em dùng quạt điện để làm gì?",
+          "hs": "HS trả lời: làm mát, đuổi nóng khi trời nắng."
+        },
+        {
+          "gv": "GV nhận xét, dẫn dắt vào bài: cùng tìm hiểu cách dùng quạt điện đúng cách và an toàn.",
+          "hs": "HS lắng nghe, sẵn sàng khám phá bài mới."
+        }
+      ]
+    },
+    {
+      "ten": "Khám phá",
+      "thoi_gian_phut": 15,
+      "cac_buoc": [
+        {
+          "gv": "GV chiếu hình 4 SGK các bước dùng quạt; chia nhóm 2, yêu cầu sắp xếp các bước theo thứ tự hợp lí.",
+          "hs": "HS quan sát hình, thảo luận nhóm 2 và sắp xếp các bước."
+        },
+        {
+          "gv": "GV mời đại diện nhóm trình bày; mời nhóm khác nhận xét.",
+          "hs": "HS đại diện nhóm trình bày; nhóm khác nhận xét, bổ sung."
+        },
+        {
+          "gv": "GV hỏi: Làm đúng thứ tự các bước giúp bảo vệ quạt như thế nào? Nhắc HS luôn giữ gìn các thiết bị điện, thiết bị số ở nhà, ở lớp.",
+          "hs": "HS trả lời: dùng đúng cách thì quạt bền, ít hỏng; nói cách giữ gìn thiết bị của em.",
+          "ma_nls": "4.1.CB1a"
+        },
+        {
+          "gv": "GV chốt các bước sử dụng quạt đúng cách; mời 1-2 HS nhắc lại.",
+          "hs": "HS lắng nghe; 1-2 HS nhắc lại các bước."
+        },
+        {
+          "gv": "GV chiếu hình 5 SGK các tình huống mất an toàn; chia nhóm 4, yêu cầu giải thích vì sao mất an toàn.",
+          "hs": "HS quan sát hình, thảo luận nhóm 4, giải thích từng tình huống."
+        },
+        {
+          "gv": "GV mời đại diện nhóm trình bày; gợi ý cách tránh rủi ro: không chạm tay vào lồng quạt, không tự sửa chữa.",
+          "hs": "HS trình bày; nêu cách tránh rủi ro."
+        },
+        {
+          "gv": "GV kể nhanh tình huống \"Quạt đang chạy bỗng kêu lạ, rung lắc\" và hỏi: Em sẽ làm gì? Nhắc HS dùng thiết bị điện, thiết bị số an toàn, báo người lớn khi thấy bất thường.",
+          "hs": "HS trả lời: không tự chạm vào quạt, báo ngay cho người lớn.",
+          "ma_nls": "4.3.CB1a"
+        },
+        {
+          "gv": "GV tổng kết các tình huống mất an toàn và cách phòng tránh.",
+          "hs": "HS lắng nghe, ghi nhớ quy tắc an toàn."
+        }
+      ]
+    },
+    {
+      "ten": "Luyện tập, thực hành",
+      "thoi_gian_phut": 10,
+      "cac_buoc": [
+        {
+          "gv": "GV tổ chức thực hành (quạt bàn nhỏ hoặc mô phỏng): đặt quạt, bật/tắt, chọn tốc độ, chỉnh hướng gió.",
+          "hs": "HS thực hành từng bước theo hướng dẫn."
+        },
+        {
+          "gv": "GV quan sát, hỗ trợ HS; mời một số HS trình bày cách làm.",
+          "hs": "HS thực hiện và trình bày trước lớp."
+        },
+        {
+          "gv": "GV mời cả lớp nhận xét; nhận xét chung, tuyên dương.",
+          "hs": "HS nhận xét bạn; rút kinh nghiệm, củng cố kĩ năng."
+        }
+      ]
+    },
+    {
+      "ten": "Vận dụng, trải nghiệm",
+      "thoi_gian_phut": 5,
+      "cac_buoc": [
+        {
+          "gv": "GV giao nhiệm vụ: cùng người thân tìm hiểu các loại quạt điện trong gia đình (dùng ở đâu, khi nào, cách dùng an toàn).",
+          "hs": "HS nghe, nhận nhiệm vụ về nhà."
+        },
+        {
+          "gv": "GV dặn HS luôn nhớ quy tắc an toàn khi dùng quạt; chia sẻ kết quả ở buổi sau.",
+          "hs": "HS ghi nhớ; hứa chia sẻ kết quả vào buổi học sau."
+        }
+      ]
+    }
+  ]
+}
