@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { PRIMARY_DIGITAL_INDICATORS } from "./digital-competency-framework";
 
 export async function generateLessonWithGemini({
   apiKey,
@@ -26,70 +27,99 @@ export async function generateLessonWithGemini({
   }
 
   const genAI = new GoogleGenerativeAI(activeKey);
-  // Using gemini-2.5-flash as default, fallback to gemini-1.5-flash
   const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash",
   });
 
-  const prompt = `
-Bạn là chuyên gia giáo dục phổ thông Việt Nam và chuyên gia chuyển đổi số sư phạm.
-Nhiệm vụ của bạn là soạn KẾ HOẠCH BÀI DẠY (Giáo án) CHUẨN CÔNG VĂN 5512/BGDĐT-GDTrH với ĐIỂM NHẤN CỐT LÕI là:
-TÍCH HỢP RÕ RÀNG, CHÍNH XÁC KHUNG NĂNG LỰC SỐ CHO HỌC SINH.
+  // Prepare string of all indicator codes for context
+  const indicatorsContext = PRIMARY_DIGITAL_INDICATORS.map(
+    (item) => `[${item.code}] (${item.domainName}): ${item.description}`
+  ).join("\n");
 
-=== THÔNG TIN BÀI DẠY ===
+  const prompt = `
+Bạn là chuyên gia giáo dục Tiểu học tại Việt Nam, am hiểu sâu sắc Chương trình GDPT 2018 cấp Tiểu học và Chuyển đổi số giáo dục.
+Nhiệm vụ của bạn là soạn KẾ HOẠCH BÀI DẠY (Giáo án) CẤP TIỂU HỌC chuẩn theo:
+👉 **CÔNG VĂN SỐ 2345/BGDĐT-GDTH (Phụ lục 3)**.
+👉 **TÍCH HỢP CHÍNH XÁC CÁC MÃ CHỈ BÁO NĂNG LỰC SỐ LỚP 1, 2, 3 (Theo Khung NLS Phụ lục Công văn 3456/BGDĐT)**.
+
+=== THÔNG TIN BÀI DẠY TIỂU HỌC ===
 - Môn học: ${subject}
-- Lớp: ${grade}
+- Lớp: ${grade} (Độ tuổi học sinh tiểu học Lớp 1-3)
 - Tên bài dạy: ${lessonTitle}
 - Thời lượng: ${duration}
-- Yêu cầu cần đạt / Nội dung kiến thức: ${learningObjectives}
-- Điều kiện thiết bị của trường: ${infrastructureLevel}
+- Yêu cầu cần đạt cốt lõi của bài: ${learningObjectives}
+- Điều kiện thiết bị/học liệu: ${infrastructureLevel}
 
-=== YÊU CẦU ĐỊNH DẠNG VÀ CẤU TRÚC THEO CV 5512 ===
+=== DANH SÁCH TOÀN BỘ MÃ CHỈ BÁO NĂNG LỰC SỐ LỚP 1-3 CẦN SỬ DỤNG ===
+${indicatorsContext}
 
-I. MỤC TIÊU
-1. Kiến thức:
-- Nêu rõ các kiến thức cốt lõi học sinh nắm được sau bài học.
-2. Năng lực:
-a) Năng lực chung: Tự chủ và tự học, Giao tiếp và hợp tác, Giải quyết vấn đề và sáng tạo.
-b) Năng lực đặc thù của môn học: (theo CT GDPT 2018 của môn ${subject}).
-c) NĂNG LỰC SỐ (BẮT BUỘC NÊU RÕ VÀ CỤ THỂ):
-- Chỉ ra cụ thể học sinh phát triển năng lực số nào (ví dụ: NLS1: Khai thác thông tin số; NLS2: Giao tiếp & hợp tác số; NLS3: Sáng tạo nội dung số; NLS5: Giải quyết vấn đề bằng công cụ số).
-- Nêu rõ hành động đo lường được: Học sinh làm được gì với công cụ số (ví dụ: "Sử dụng phần mềm GeoGebra để xoay và quan sát hình 3D...", "Tương tác và gửi kết quả thảo luận nhóm lên Padlet...").
-3. Phẩm chất:
-- Chăm chỉ, trung thực, trách nhiệm (gắn với văn hóa ứng xử và bản quyền số).
+=== YÊU CẦU CẤU TRÚC CHUẨN PHỤ LỤC 3 CÔNG VĂN 2345/BGDĐT-GDTH ===
 
-II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU SỐ
+KẾ HOẠCH BÀI DẠY
+MÔN: ${subject.toUpperCase()} - ${grade.toUpperCase()}
+BÀI: ${lessonTitle.toUpperCase()}
+(Thời lượng: ${duration})
+
+I. YÊU CẦU CẦN ĐẠT
+1. Năng lực đặc thù:
+- Nêu rõ các yêu cầu cần đạt về kiến thức, kĩ năng môn ${subject} theo Chương trình GDPT 2018 cấp Tiểu học mà học sinh cần đạt sau bài học.
+2. Năng lực chung:
+- Tự chủ và tự học: (Ví dụ: tự giác thực hiện nhiệm vụ học tập, chuẩn bị đồ dùng...).
+- Giao tiếp và hợp tác: (Ví dụ: trao đổi, chia sẻ với bạn trong nhóm...).
+- Giải quyết vấn đề và sáng tạo: (Ví dụ: biết đưa ra cách làm mới, giải quyết tình huống...).
+3. Năng lực số (BẮT BUỘC TRÍCH DẪN ĐÚNG MÃ CHỈ BÁO PHÙ HỢP TỪ DANH SÁCH TRÊN):
+- Chọn từ 2 đến 3 mã chỉ báo năng lực số thiết thực nhất với bài học này (Ví dụ: [1.1.CB1a], [2.1.CB1a], [3.1.CB1a], [4.1.CB1a], [5.1.CB1a], [6.3.CB1a]...).
+- Với mỗi mã, ghi rõ hành vi cụ thể của học sinh lứa tuổi tiểu học trong bài này.
+  Ví dụ mẫu:
+  + [Mã 2.1.CB1a]: Học sinh biết chọn và bấm vào đáp án đúng trên trò chơi tương tác (Wordwall/Quizizz/PowerPoint) trên màn hình ti vi/máy chiếu.
+  + [Mã 1.1.CB1b]: Học sinh biết quan sát video/hình ảnh học liệu số do giáo viên trình chiếu và chỉ ra chi tiết bài học.
+  + [Mã 4.3.CB1a]: Học sinh giữ khoảng cách mắt an toàn khi quan sát màn hình máy chiếu/ti vi của lớp.
+4. Phẩm chất:
+- Yêu nước, nhân ái, chăm chỉ, trung thực, trách nhiệm (gắn với sự cẩn thận khi sử dụng đồ dùng, thiết bị số).
+
+II. ĐỒ DÙNG DẠY HỌC
 1. Giáo viên:
-- Thiết bị (máy chiếu, laptop, mạng Internet...)
-- Học liệu số & Phần mềm cụ thể: Nêu tên công cụ số cụ thể (ví dụ: GeoGebra, PhET, Padlet, Canva, Quizizz...), đường link truy cập, và học liệu số (video, phiếu học tập số, slide tương tác).
+- Ti vi/máy chiếu, máy tính, bài giảng điện tử tương tác.
+- Học liệu số cụ thể: Video sinh động, bài tập trò chơi (Wordwall, Quizizz, PowerPoint tương tác, sách điện tử Hành Trang Số), tranh ảnh số.
 2. Học sinh:
-- Thiết bị và học liệu số theo mức độ (${infrastructureLevel}).
+- Sách giáo khoa, vở bài tập, đồ dùng học tập môn học.
+- (Nếu có điều kiện): Bảng con, thẻ trắc nghiệm (hoặc thiết bị theo nhóm nếu điều kiện cho phép).
 
-III. TIẾN TRÌNH DẠY HỌC (GỒM 4 HOẠT ĐỘNG CHUẨN 5512)
-Trong mỗi hoạt động, BẮT BUỘC phải chỉ ra:
-- [TÍCH HỢP NĂNG LỰC SỐ]: Sử dụng công cụ số nào, phát triển chỉ số năng lực số nào.
-- Đầy đủ 4 bước tổ chức:
-  + Bước 1: Chuyển giao nhiệm vụ
-  + Bước 2: Thực hiện nhiệm vụ
-  + Bước 3: Báo cáo, thảo luận
-  + Bước 4: Kết luận, nhận định
+III. CÁC HOẠT ĐỘNG DẠY HỌC CHỦ YẾU
+(Tiểu học chuẩn CV 2345: Mỗi hoạt động phải phân định rành mạch giữa HOẠT ĐỘNG CỦA GIÁO VIÊN và HOẠT ĐỘNG CỦA HỌC SINH).
 
-Cụ thể 4 hoạt động:
-1. HOẠT ĐỘNG 1: MỞ ĐẦU / KHỞI ĐỘNG (Khoảng 5-7 phút)
-- Tạo hứng thú hoặc nêu tình huống có vấn đề. Gợi ý tích hợp công cụ khảo sát nhanh (Kahoot, Quizizz, Mentimeter hoặc video trực quan).
+1. HOẠT ĐỘNG 1: KHỞI ĐỘNG (KẾT NỐI) (Khoảng 5 phút)
+- Mục tiêu: Tạo tâm thế hào hứng, kết nối vào bài mới. [Ghi rõ mã NLS tích hợp, ví dụ [Mã 2.1.CB1a]]
+- Cách tiến hành:
+  + Hoạt động của giáo viên: (Tổ chức trò chơi khởi động qua học liệu số/video bài hát/Wordwall...).
+  + Hoạt động của học sinh: (Tham gia tương tác, hát múa hoặc chọn đáp án, hào hứng vào bài).
 
-2. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI (Khoảng 20-25 phút)
-- Khám phá kiến thức trọng tâm. Gợi ý tích hợp mô phỏng trực quan, phần mềm chuyên dụng (GeoGebra, PhET, Google Earth), hoặc thảo luận nhóm trên bảng số (Padlet, Google Docs).
+2. HOẠT ĐỘNG 2: KHÁM PHÁ (HÌNH THÀNH KIẾN THỨC MỚI) (Khoảng 12 - 15 phút)
+- Mục tiêu: Học sinh khám phá kiến thức cốt lõi của bài. [Ghi rõ mã NLS tích hợp, ví dụ [Mã 1.1.CB1a], [Mã 5.2.CB1b]]
+- Cách tiến hành:
+  + Hoạt động của giáo viên: (Trình chiếu tranh ảnh/mô hình số, đặt câu hỏi gợi mở, hướng dẫn học sinh quan sát, thảo luận nhóm...).
+  + Hoạt động của học sinh: (Quan sát học liệu số, thảo luận, phát biểu ý kiến, rút ra kết luận bài học).
 
-3. HOẠT ĐỘNG 3: LUYỆN TẬP (Khoảng 10-12 phút)
-- Củng cố bài học. Gợi ý bài tập tương tác số hoặc trò chơi trắc nghiệm đánh giá nhanh.
+3. HOẠT ĐỘNG 3: LUYỆN TẬP, THỰC HÀNH (Khoảng 10 - 12 phút)
+- Mục tiêu: Củng cố và thực hành kiến thức vừa học. [Ghi rõ mã NLS tích hợp, ví dụ [Mã 3.1.CB1a], [Mã 5.1.CB1a]]
+- Cách tiến hành:
+  + Hoạt động của giáo viên: (Giao bài tập/nhiệm vụ thực hành, tổ chức trò chơi tương tác, theo dõi, hỗ trợ học sinh...).
+  + Hoạt động của học sinh: (Làm bài vào vở/bảng con hoặc lên bảng tương tác thực hiện, nhận xét bài của bạn).
 
-4. HOẠT ĐỘNG 4: VẬN DỤNG (Khoảng 3-5 phút và giao về nhà)
-- Mở rộng, liên hệ thực tế. Yêu cầu sản phẩm số (ví dụ: tạo infographic tóm tắt bài bằng Canva, quay video ngắn, tìm kiếm tư liệu số có trích dẫn nguồn).
+4. HOẠT ĐỘNG 4: VẬN DỤNG, TRẢI NGHIỆM (Khoảng 3 - 5 phút)
+- Mục tiêu: Vận dụng kiến thức vào thực tế đời sống. [Ghi rõ mã NLS tích hợp, ví dụ [Mã 4.3.CB1a] hoặc [Mã 6.3.CB1a]]
+- Cách tiến hành:
+  + Hoạt động của giáo viên: (Nêu tình huống thực tế, liên hệ đời sống gia đình/trường lớp, dặn dò về nhà...).
+  + Hoạt động của học sinh: (Liên hệ bản thân, chia sẻ câu chuyện, ghi nhớ nhắc nhở).
 
-=== LƯU Ý QUAN TRỌNG ===
-- Trình bày mạch lạc, trang trọng, văn phong sư phạm chuẩn mực Bộ Giáo dục và Đào tạo Việt Nam.
-- Đánh dấu nổi bật các phần [NĂNG LỰC SỐ TÍCH HỢP] và [CÔNG CỤ SỐ ĐỀ XUẤT] để giáo viên dễ dàng theo dõi và đưa vào giáo án thực tế.
+IV. ĐIỀU CHỈNH SAU BÀI DẠY (MỤC BẮT BUỘC THEO CV 2345)
+- ...........................................................................................................................................
+- ...........................................................................................................................................
+
+=== NGUYÊN TẮC QUAN TRỌNG KHI SOẠN ===
+- Ngôn ngữ, hoạt động PHẢI PHÙ HỢP VỚI TÂM LÝ LỨA TUỔI HỌC SINH LỚP 1, 2, 3 (nhẹ nhàng, trực quan, nhiều hình ảnh, trò chơi học tập vui vẻ).
+- Tuyệt đối không giao nhiệm vụ quá khó về công nghệ cho học sinh tiểu học (học sinh tiểu học chủ yếu tương tác trực quan, làm quen thao tác đơn giản, quan sát và hình thành thói quen an toàn số).
+- Phải ghi đúng định dạng mã chỉ báo: [Mã X.X.CB1x].
 `;
 
   try {
@@ -97,7 +127,6 @@ Cụ thể 4 hoạt động:
     const response = await result.response;
     return response.text();
   } catch (error: unknown) {
-    // Retry with gemini-1.5-flash if 2.5-flash is not available for this key
     try {
       const fallbackModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
       const fallbackResult = await fallbackModel.generateContent(prompt);

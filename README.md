@@ -1,74 +1,52 @@
-# Giáo Viên Số (.app) 🎓
+# Giáo Viên Số Tiểu Học (.app) 🎓
 
-> Ứng dụng Web hỗ trợ giáo viên tích hợp chuẩn **Khung Năng lực số** vào **Kế hoạch bài dạy (Giáo án theo Công văn 5512/BGDĐT-GDTrH)**, sẵn sàng triển khai 1-click lên **Vercel** với tên miền miễn phí `*.vercel.app`.
+> Ứng dụng Web hỗ trợ giáo viên Tiểu học tích hợp chuẩn **Bảng chỉ báo Năng lực số Lớp 1, 2, 3 (Phụ lục Công văn 3456/BGDĐT)** vào **Kế hoạch bài dạy theo Công văn 2345/BGDĐT-GDTH**, sẵn sàng triển khai 1-click lên **Vercel** với tên miền miễn phí `*.vercel.app`.
 
 ---
 
-## ✨ Tính năng nổi bật
+## ✨ Điểm nổi bật & Chuẩn hóa Sư phạm Tiểu học
 
-1. **Chuẩn hóa Công văn 5512**:
-   - Tự động xây dựng kế hoạch bài dạy 4 hoạt động chuẩn mực: *Khởi động*, *Hình thành kiến thức*, *Luyện tập*, *Vận dụng*.
-   - Đầy đủ 4 bước tổ chức: *Chuyển giao nhiệm vụ*, *Thực hiện nhiệm vụ*, *Báo cáo thảo luận*, *Kết luận nhận định*.
+1. **Chuẩn Phụ lục 3 - Công văn 2345/BGDĐT-GDTH**:
+   - Cấu trúc chuẩn 4 phần của cấp Tiểu học:
+     - `I. YÊU CẦU CẦN ĐẠT` (Năng lực đặc thù, Năng lực chung, **Năng lực số**, Phẩm chất).
+     - `II. ĐỒ DÙNG DẠY HỌC` (Phân định Đồ dùng GV và Đồ dùng HS).
+     - `III. CÁC HOẠT ĐỘNG DẠY HỌC CHỦ YẾU` (Phân tách rành mạch **Hoạt động của giáo viên** và **Hoạt động của học sinh** qua 4 tiến trình: *Khởi động* $\rightarrow$ *Khám phá* $\rightarrow$ *Luyện tập/Thực hành* $\rightarrow$ *Vận dụng/Trải nghiệm*).
+     - `IV. ĐIỀU CHỈNH SAU BÀI DẠY` (Mục bắt buộc).
 
-2. **Tích hợp Khung Năng lực số (NLS)**:
-   - Dựa trên chuẩn DigComp 2.2 và hướng dẫn chuyển đổi số giáo dục của Bộ GD&ĐT.
-   - Gợi ý cụ thể chỉ số phát triển: NLS1 (Khai thác thông tin số), NLS2 (Giao tiếp & hợp tác số), NLS3 (Sáng tạo nội dung số), NLS5 (Giải quyết vấn đề bằng công nghệ số).
+2. **Tích hợp chính xác 52 Mã chỉ báo NLS Lớp 1-3**:
+   - Nạp đầy đủ dữ liệu từ file `MA_NLS/Bang_chi_bao_NLS_L123.md` (thuộc 6 Miền năng lực: *Thông tin & dữ liệu*, *Giao tiếp & hợp tác*, *Sáng tạo nội dung số*, *An toàn số*, *Giải quyết vấn đề*, và *Trí tuệ nhân tạo AI*).
+   - Tự động gắn các mã chính xác như `[1.1.CB1a]`, `[2.1.CB1a]`, `[4.3.CB1a]`, `[6.3.CB1a]` vào đúng hoạt động.
 
-3. **Gợi ý công cụ EdTech thực tế**:
-   - Tự động đề xuất phần mềm phù hợp với hạ tầng trường học: GeoGebra, PhET Interactive, Padlet, Canva, Quizizz, Kahoot, Google Earth...
+3. **Giao diện tra cứu & Sao chép mã chỉ báo**:
+   - Bộ lọc và tìm kiếm nhanh toàn bộ 52 mã chỉ báo trực tiếp trên web.
+   - Nút chép mã 1-click tiện lợi cho giáo viên khi soạn kế hoạch dạy học cá nhân.
 
-4. **Xuất file Word (.docx) 1-Click**:
-   - Định dạng chuẩn thể thức văn bản: Font Times New Roman, cỡ chữ 13-14pt, lề chuẩn trang in.
+4. **Xuất file Word (`.docx`) chuẩn mẫu giáo án Tiểu học**:
+   - Font Times New Roman, cỡ 13-14pt, lề chuẩn trang in văn bản hành chính Việt Nam.
 
 ---
 
 ## 🛠️ Cài đặt & Chạy trên máy tính (Local)
 
-1. Mở cửa sổ dòng lệnh (Terminal/PowerShell) tại thư mục dự án:
+1. Mở PowerShell tại thư mục dự án:
    ```bash
    cd C:\Users\ADMIN\Desktop\Giao-vien-so
    ```
 
-2. Cài đặt các thư viện:
-   ```bash
-   npm install
-   ```
-
-3. Chạy môi trường phát triển:
+2. Chạy ứng dụng:
    ```bash
    npm run dev
    ```
 
-4. Truy cập trình duyệt tại: `http://localhost:3000`
+3. Mở trình duyệt tại: `http://localhost:3000`
 
 ---
 
-## 🚀 Hướng dẫn Triển khai lên Vercel (Nhận link .vercel.app Miễn phí)
+## 🚀 Hướng dẫn Triển khai lên Vercel
 
-### Bước 1: Khởi tạo Git & Đẩy lên GitHub
-Trong thư mục dự án, chạy:
 ```bash
-git init
 git add .
-git commit -m "Khoi tao du an Giao Vien So"
-git branch -M main
-```
-Tạo một kho chứa (Repository) mới trên [GitHub.com](https://github.com), sau đó liên kết và đẩy code:
-```bash
-git remote add origin https://github.com/[username-cua-ban]/[ten-repo].git
+git commit -m "Cap nhat chuan CV 2345 va Bang ma chi bao NLS Lop 1-3"
 git push -u origin main
 ```
-
-### Bước 2: Deploy trên Vercel
-1. Truy cập [vercel.com](https://vercel.com/) và đăng nhập bằng tài khoản GitHub.
-2. Bấm **"Add New Project"** và chọn kho GitHub bạn vừa tải lên.
-3. Trong mục **Environment Variables**, thêm biến:
-   - **Name**: `GEMINI_API_KEY`
-   - **Value**: `[Khóa API Gemini của bạn lấy từ aistudio.google.com]`
-4. Bấm **Deploy**. Sau 1 phút, bạn sẽ có trang web hoạt động với đường dẫn:
-   `https://[tên-bạn-chọn].vercel.app`
-
----
-
-## 📄 Bản quyền
-Dành riêng cho cộng đồng giáo viên và đổi mới giáo dục Việt Nam.
+Sau đó truy cập **[Vercel.com](https://vercel.com)** $\rightarrow$ Import repository $\rightarrow$ Điền biến môi trường `GEMINI_API_KEY` $\rightarrow$ Deploy để nhận link `https://[ten-du-an].vercel.app`.

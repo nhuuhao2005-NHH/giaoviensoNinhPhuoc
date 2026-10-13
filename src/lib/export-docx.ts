@@ -5,7 +5,6 @@ import {
   TextRun,
   HeadingLevel,
   AlignmentType,
-  BorderStyle,
 } from "docx";
 import saveAs from "file-saver";
 
@@ -23,17 +22,33 @@ export async function exportLessonToWord({
   const lines = content.split("\n");
   const children: Paragraph[] = [];
 
-  // Header Tiêu đề trường/Bộ môn
+  // Tiêu đề Kế hoạch bài dạy theo CV 2345
   children.push(
     new Paragraph({
       alignment: AlignmentType.CENTER,
       children: [
         new TextRun({
-          text: `KẾ HOẠCH BÀI DẠY (TÍCH HỢP NĂNG LỰC SỐ)`,
+          text: `KẾ HOẠCH BÀI DẠY CẤP TIỂU HỌC`,
           bold: true,
           size: 28, // 14pt
           font: "Times New Roman",
           color: "1F497D",
+        }),
+      ],
+      spacing: { after: 80 },
+    })
+  );
+
+  children.push(
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [
+        new TextRun({
+          text: `(Chuẩn Công văn 2345/BGDĐT-GDTH - Tích hợp Khung Năng lực số Lớp 1-3)`,
+          italics: true,
+          size: 22, // 11pt
+          font: "Times New Roman",
+          color: "595959",
         }),
       ],
       spacing: { after: 120 },
@@ -67,11 +82,11 @@ export async function exportLessonToWord({
           color: "C00000",
         }),
       ],
-      spacing: { after: 240 },
+      spacing: { after: 200 },
     })
   );
 
-  // Parse lines into Word paragraphs
+  // Parse từng dòng
   for (const rawLine of lines) {
     const line = rawLine.trim();
 
@@ -79,14 +94,14 @@ export async function exportLessonToWord({
       children.push(
         new Paragraph({
           children: [new TextRun("")],
-          spacing: { after: 100 },
+          spacing: { after: 60 },
         })
       );
       continue;
     }
 
-    // Heading I, II, III
-    if (/^(I|II|III|IV|V)\.\s/i.test(line)) {
+    // Heading I, II, III, IV (Các phần lớn của CV 2345)
+    if (/^(I|II|III|IV)\.\s/i.test(line)) {
       children.push(
         new Paragraph({
           heading: HeadingLevel.HEADING_1,
@@ -99,13 +114,13 @@ export async function exportLessonToWord({
               color: "1F497D",
             }),
           ],
-          spacing: { before: 200, after: 120 },
+          spacing: { before: 180, after: 100 },
         })
       );
       continue;
     }
 
-    // Heading 1. 2. 3. or HOẠT ĐỘNG
+    // Heading 1. 2. 3. 4. hoặc HOẠT ĐỘNG
     if (/^(\d+\.|HOẠT ĐỘNG)/i.test(line)) {
       children.push(
         new Paragraph({
@@ -116,32 +131,47 @@ export async function exportLessonToWord({
               bold: true,
               size: 24, // 12pt
               font: "Times New Roman",
+              color: "0F243E",
             }),
           ],
-          spacing: { before: 140, after: 80 },
+          spacing: { before: 120, after: 60 },
         })
       );
       continue;
     }
 
-    // Highlight Digital Competency lines
-    const isDigitalHighlight =
+    // Hoạt động của giáo viên / Hoạt động của học sinh
+    const isTeacherStudentStep =
+      line.startsWith("+ Hoạt động của giáo viên") ||
+      line.startsWith("+ Hoạt động của học sinh") ||
+      line.startsWith("Hoạt động của giáo viên") ||
+      line.startsWith("Hoạt động của học sinh") ||
+      line.startsWith("- Mục tiêu:") ||
+      line.startsWith("- Cách tiến hành:");
+
+    // Highlight Mã chỉ báo năng lực số [Mã ...]
+    const isIndicatorHighlight =
+      line.includes("CB1") ||
+      line.includes("[Mã") ||
       line.includes("NĂNG LỰC SỐ") ||
-      line.includes("CÔNG CỤ SỐ") ||
-      line.includes("[TÍCH HỢP NĂNG LỰC SỐ]");
+      line.includes("Năng lực số");
 
     children.push(
       new Paragraph({
         children: [
           new TextRun({
             text: line,
-            bold: isDigitalHighlight,
-            color: isDigitalHighlight ? "004D40" : "000000",
-            size: 24,
+            bold: isTeacherStudentStep || isIndicatorHighlight,
+            color: isIndicatorHighlight
+              ? "006622"
+              : isTeacherStudentStep
+              ? "1F497D"
+              : "000000",
+            size: 24, // 12pt
             font: "Times New Roman",
           }),
         ],
-        spacing: { after: 80 },
+        spacing: { after: 60 },
       })
     );
   }
@@ -152,10 +182,10 @@ export async function exportLessonToWord({
         properties: {
           page: {
             margin: {
-              top: 1440, // 1 inch = 1440 dxa (2.54cm)
+              top: 1440, // 1 inch (2.54cm)
               right: 1440,
               bottom: 1440,
-              left: 1700, // 3cm for binding
+              left: 1700, // 3cm mép gáy sách
             },
           },
         },
@@ -165,6 +195,6 @@ export async function exportLessonToWord({
   });
 
   const blob = await Packer.toBlob(doc);
-  const safeFilename = `Giao_an_${subject}_${grade}_${lessonTitle.replace(/[^a-zA-Z0-9\u00C0-\u024F\u1E00-\u1EFF]/g, "_")}.docx`;
+  const safeFilename = `Giao_an_Tieu_hoc_${grade}_${subject}_${lessonTitle.replace(/[^a-zA-Z0-9\u00C0-\u024F\u1E00-\u1EFF]/g, "_")}.docx`;
   saveAs(blob, safeFilename);
 }
