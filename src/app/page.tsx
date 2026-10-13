@@ -275,13 +275,25 @@ export default function HomePage() {
     const timer3 = setTimeout(() => setLoadingStep(3), 12000);
 
     try {
-      const codes = selectedNLS.map((code) => {
-        const found = PRIMARY_DIGITAL_INDICATORS.find((i) => i.code === code);
-        return {
-          ma: code,
-          noi_dung: found ? found.description : "",
-        };
-      });
+      const codes = integrateDigital
+        ? selectedNLS.map((code) => {
+            const found = PRIMARY_DIGITAL_INDICATORS.find((i) => i.code === code);
+            return {
+              ma: code,
+              noi_dung: found ? found.description : "",
+            };
+          })
+        : [];
+
+      const aiCodes = integrateAI
+        ? selectedAI.map((code) => {
+            const found = PRIMARY_AI_INDICATORS.find((i) => i.code === code);
+            return {
+              ma: code,
+              noi_dung: found ? found.description : "",
+            };
+          })
+        : [];
 
       const formData = new FormData();
       if (uploadedFile) {
@@ -292,7 +304,10 @@ export default function HomePage() {
       }
       formData.append("mon", subject);
       formData.append("tiet", tiet);
+      formData.append("infrastructureLevel", infrastructureLevel);
+      if (teacherSuggestions) formData.append("teacherSuggestions", teacherSuggestions);
       formData.append("codes", JSON.stringify(codes));
+      formData.append("aiCodes", JSON.stringify(aiCodes));
       if (apiKey) formData.append("apiKey", apiKey);
 
       const res = await fetch("/api/khbd", {

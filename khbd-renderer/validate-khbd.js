@@ -6,10 +6,11 @@ const TOTAL_MINUTES = 35; // một tiết tiểu học; đổi nếu trường k
 const KHOI_DONG = /kh[ởo]i\s*đ[ộo]ng/i;
 const bare = (m) => clean(m).replace(/[\[\]()]/g, "").replace(/^Mã\s*/i, "").trim();
 
-function validateKhbd(raw, selectedCodes = []) {
+function validateKhbd(raw, selectedCodes = [], selectedAiCodes = []) {
   const errors = [];
   const d = JSON.parse(JSON.stringify(raw || {}));
   const want = selectedCodes.map(bare).filter(Boolean);
+  const wantAi = (selectedAiCodes || []).map(bare).filter(Boolean);
 
   // 1. Hoạt động
   d.hoat_dong = (d.hoat_dong || []).filter((h) => (h.cac_buoc || []).some((s) => clean(s.gv) || clean(s.hs)));
@@ -44,6 +45,13 @@ function validateKhbd(raw, selectedCodes = []) {
     });
     d.hoat_dong.forEach((h) => h.cac_buoc.forEach((s) => { if (s.ma_nls && !want.includes(bare(s.ma_nls))) delete s.ma_nls; }));
   }
+
+  // 4. Mã Trí tuệ nhân tạo (AI): chuẩn hóa & lọc đúng mã đã chọn nếu có
+  d.tich_hop_ai = (d.tich_hop_ai || []).map((x) => ({ ma: bare(x.ma), noi_dung: clean(x.noi_dung) }));
+  if (wantAi.length) {
+    d.tich_hop_ai = d.tich_hop_ai.filter((x) => wantAi.includes(x.ma));
+  }
+
   return { data: d, errors };
 }
 module.exports = { validateKhbd, TOTAL_MINUTES };

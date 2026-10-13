@@ -6,16 +6,61 @@ const { responseSchema, systemInstruction } = require("./schema-and-prompt");
 const { validateKhbd } = require("./validate-khbd");
 const { renderKhbd } = require("./render-khbd");
 
-// Danh sách các model Flash ổn định, có hạn ngạch miễn phí (Free Tier) dồi dào
-// Tránh lỗi 429 Quota limit: 0 của gemini-2.5-pro khi dùng API Key miễn phí
-const CANDIDATE_MODELS = [
-  process.env.GEMINI_MODEL,
+const MAX_TRIES = 3;
+
+// Danh sách model dự phòng khi không thể truy vấn ListModels
+const FALLBACK_MODELS = [
   "gemini-2.5-flash",
   "gemini-2.0-flash",
+  "gemini-2.0-flash-lite",
+  "gemini-1.5-flash-latest",
+  "gemini-1.5-flash-002",
+  "gemini-1.5-flash-001",
   "gemini-1.5-flash",
-].filter(Boolean);
+  "gemini-2.5-pro",
+];
 
-const MAX_TRIES = 3;
+// Tự động truy vấn Google AI Studio xem API Key này hỗ trợ những model nào (tránh lỗi 404 Not Found)
+async function getAvailableModels(apiKey) {
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data?.models)) {
+        const supported = data.models
+          .filter(
+            (m) =>
+              Array.isArray(m.supportedGenerationMethods) &&
+              m.supportedGenerationMethods.includes("generateContent")
+          )
+          .map((m) => m.name.replace(/^models\//, ""));
+        if (supported.length > 0) return supported;
+      }
+    }
+  } catch (err) {
+    console.warn("[khbd-pipeline] Không thể gọi ListModels tự động:", err?.message);
+  }
+  return [];
+}
+
+// Xếp hạng: ưu tiên các model Flash có hạn ngạch Free Tier dồi dào, tránh lỗi 429 limit: 0 của bản Pro
+function rankModels(modelList) {
+  const flash = modelList.filter((m) => m.toLowerCase().includes("flash"));
+  const nonFlash = modelList.filter((m) => !m.toLowerCase().includes("flash"));
+
+  const score = (name) => {
+    const lower = name.toLowerCase();
+    if (lower.includes("2.5-flash")) return 100;
+    if (lower.includes("2.0-flash")) return 90;
+    if (lower.includes("flash-lite")) return 85;
+    if (lower.includes("1.5-flash")) return 80;
+    if (lower.includes("flash")) return 70;
+    return 10;
+  };
+
+  flash.sort((a, b) => score(b) - score(a));
+  return [...flash, ...nonFlash];
+}
 
 // Đọc giáo án giáo viên tải lên: .docx -> chữ; .pdf -> gửi thẳng cho Gemini; .txt/.md -> chữ
 async function toParts(file) {
@@ -31,7 +76,7 @@ async function toParts(file) {
 
 /**
  * file: { name, buffer }                 — giáo án giáo viên tải lên
- * options: { mon, tiet, codes:[{ma,noi_dung}], apiKey }   — lựa chọn trên web app
+ * options: { mon, tiet, codes:[{ma,noi_dung}], aiCodes:[{ma,noi_dung}], teacherSuggestions, infrastructureLevel, apiKey }
  */
 async function processKhbd(file, options) {
   const apiKey = options.apiKey || process.env.GEMINI_API_KEY;
@@ -39,13 +84,49 @@ async function processKhbd(file, options) {
     throw new Error("Chưa có GEMINI_API_KEY. Vui lòng cài đặt khóa API trong nút 'Cài API Key'.");
   }
 
+  // Tự động tìm các model thực sự khả dụng cho khóa API của giáo viên
+  const discovered = await getAvailableModels(apiKey);
+  const candidateModels = discovered.length > 0 ? rankModels(discovered) : FALLBACK_MODELS;
+
+  // Nếu người dùng có đặt biến môi trường GEMINI_MODEL, ưu tiên lên đầu
+  const preferredModel = process.env.GEMINI_MODEL;
+  const modelsToUse = preferredModel
+    ? [preferredModel, ...candidateModels.filter((m) => m !== preferredModel)]
+    : candidateModels;
+
   const genAI = new GoogleGenerativeAI(apiKey);
   const selected = (options.codes || []).map((c) => c.ma);
-  const ask =
-    `Môn: ${options.mon}. Tiết: ${options.tiet || "không rõ"}.\n` +
-    `Mã Năng lực số cần tích hợp (chỉ các mã này):\n` +
-    (options.codes || []).map((c) => `- ${c.ma}: ${c.noi_dung}`).join("\n");
+  const selectedAi = (options.aiCodes || []).map((c) => c.ma);
 
+  const askParts = [`Môn: ${options.mon}. Tiết: ${options.tiet || "không rõ"}.`];
+
+  if (options.infrastructureLevel) {
+    askParts.push(`Đồ dùng và thiết bị dạy học: ${options.infrastructureLevel}`);
+  }
+
+  if (options.codes && options.codes.length > 0) {
+    askParts.push(
+      `Mã Năng lực số cần tích hợp (chỉ các mã này):\n` +
+        options.codes.map((c) => `- ${c.ma}: ${c.noi_dung}`).join("\n")
+    );
+  } else {
+    askParts.push(`Không tích hợp Năng lực số (để nang_luc_so rỗng []).`);
+  }
+
+  if (options.aiCodes && options.aiCodes.length > 0) {
+    askParts.push(
+      `Mã Trí tuệ nhân tạo (AI) cần tích hợp (chỉ các mã này):\n` +
+        options.aiCodes.map((c) => `- ${c.ma}: ${c.noi_dung}`).join("\n")
+    );
+  } else {
+    askParts.push(`Không tích hợp AI (để tich_hop_ai rỗng []).`);
+  }
+
+  if (options.teacherSuggestions && options.teacherSuggestions.trim()) {
+    askParts.push(`Gợi ý của giáo viên:\n${options.teacherSuggestions.trim()}`);
+  }
+
+  const ask = askParts.join("\n\n");
   const parts = [...(await toParts(file)), { text: ask }];
   let feedback = "", last;
   let activeModelIndex = 0;
@@ -54,11 +135,12 @@ async function processKhbd(file, options) {
     const contentPayload = [...parts, ...(feedback ? [{ text: feedback }] : [])];
     let res = null;
     let lastError = null;
+    const attemptErrors = [];
 
     // Danh sách model thử: ưu tiên model đã hoạt động thành công
     const modelsToTry = [
-      CANDIDATE_MODELS[activeModelIndex],
-      ...CANDIDATE_MODELS.filter((_, idx) => idx !== activeModelIndex),
+      modelsToUse[activeModelIndex],
+      ...modelsToUse.filter((_, idx) => idx !== activeModelIndex),
     ];
 
     for (const modelName of modelsToTry) {
@@ -73,11 +155,12 @@ async function processKhbd(file, options) {
           },
         });
         res = await model.generateContent(contentPayload);
-        activeModelIndex = CANDIDATE_MODELS.indexOf(modelName);
-        break; // Gọi thành công, tiếp tục bước xử lý
+        activeModelIndex = modelsToUse.indexOf(modelName);
+        break; // Thành công
       } catch (err) {
         lastError = err;
         const errMsg = err?.message || String(err);
+        attemptErrors.push(`[${modelName}]: ${errMsg}`);
         console.warn(`[khbd-pipeline] Model ${modelName} gặp lỗi: ${errMsg}`);
 
         // Nếu API Key không hợp lệ thì dừng ngay lập tức
@@ -85,19 +168,21 @@ async function processKhbd(file, options) {
           throw new Error("Khóa Gemini API Key không hợp lệ. Vui lòng kiểm tra lại mã API trong nút 'Cài API Key'.");
         }
 
-        // Nếu gặp lỗi 429 Quota Exceeded hoặc model không khả dụng, thử model tiếp theo trong danh sách
+        // Tự động chuyển sang model tiếp theo trong danh sách
         continue;
       }
     }
 
     if (!res) {
-      const errText = lastError?.message || "";
-      if (errText.includes("429") || errText.includes("Quota exceeded")) {
+      const allErrorsText = attemptErrors.join("; ");
+      if (allErrorsText.includes("429") || allErrorsText.includes("Quota exceeded")) {
         throw new Error(
           `Hạn ngạch gọi Gemini API miễn phí (Free Tier) tạm thời hết lượt yêu cầu (429 Too Many Requests). Vui lòng thử lại sau ít phút hoặc dùng khóa API khác từ https://aistudio.google.com/.`
         );
       }
-      throw lastError || new Error("Không thể gọi dịch vụ Gemini AI, vui lòng thử lại.");
+      throw new Error(
+        `Không thể gọi mô hình Gemini AI. Chi tiết: ${attemptErrors[attemptErrors.length - 1] || lastError?.message || "Lỗi kết nối"}`
+      );
     }
 
     let json;
@@ -108,7 +193,7 @@ async function processKhbd(file, options) {
       continue;
     }
 
-    const { data, errors } = validateKhbd(json, selected);
+    const { data, errors } = validateKhbd(json, selected, selectedAi);
     last = data;
     if (!errors.length) return renderKhbd(data, { mon: options.mon, tiet: options.tiet });
     feedback = "Sửa các lỗi sau rồi trả lại toàn bộ JSON:\n- " + errors.join("\n- ");

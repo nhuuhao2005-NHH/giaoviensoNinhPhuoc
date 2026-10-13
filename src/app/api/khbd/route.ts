@@ -10,6 +10,9 @@ export async function POST(req: Request) {
     let mon = "Tin học";
     let tiet = "";
     let codes: Array<{ ma: string; noi_dung: string }> = [];
+    let aiCodes: Array<{ ma: string; noi_dung: string }> = [];
+    let infrastructureLevel = "";
+    let teacherSuggestions = "";
     let apiKey = "";
 
     if (contentType.includes("multipart/form-data")) {
@@ -24,6 +27,9 @@ export async function POST(req: Request) {
       }
       mon = (formData.get("mon") as string) || (formData.get("subject") as string) || "Tin học";
       tiet = (formData.get("tiet") as string) || "";
+      infrastructureLevel = (formData.get("infrastructureLevel") as string) || "";
+      teacherSuggestions = (formData.get("teacherSuggestions") as string) || "";
+      
       const codesRaw = formData.get("codes") as string;
       if (codesRaw) {
         try {
@@ -32,12 +38,25 @@ export async function POST(req: Request) {
           codes = [];
         }
       }
+
+      const aiCodesRaw = formData.get("aiCodes") as string;
+      if (aiCodesRaw) {
+        try {
+          aiCodes = typeof aiCodesRaw === "string" ? JSON.parse(aiCodesRaw) : aiCodesRaw;
+        } catch {
+          aiCodes = [];
+        }
+      }
+
       apiKey = (formData.get("apiKey") as string) || "";
     } else {
       const body = await req.json();
       mon = body.mon || body.subject || "Tin học";
       tiet = body.tiet || "";
+      infrastructureLevel = body.infrastructureLevel || "";
+      teacherSuggestions = body.teacherSuggestions || "";
       codes = body.codes || [];
+      aiCodes = body.aiCodes || [];
       apiKey = body.apiKey || "";
 
       if (body.fileBase64 && body.fileName) {
@@ -77,7 +96,15 @@ export async function POST(req: Request) {
     // Nối trực tiếp vào pipeline.js trong thư mục khbd-renderer
     const { processKhbd } = require("../../../../khbd-renderer/pipeline");
 
-    const docxBuffer = await processKhbd(fileObj, { mon, tiet, codes, apiKey });
+    const docxBuffer = await processKhbd(fileObj, {
+      mon,
+      tiet,
+      codes,
+      aiCodes,
+      infrastructureLevel,
+      teacherSuggestions,
+      apiKey,
+    });
 
     return new NextResponse(docxBuffer, {
       status: 200,
