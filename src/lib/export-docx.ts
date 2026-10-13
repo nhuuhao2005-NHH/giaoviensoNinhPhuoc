@@ -367,7 +367,12 @@ export async function exportLessonToWord({
 
     const isDigitalHighlight =
       line.startsWith("*Tích hợp Năng lực số:") ||
+      line.startsWith("*Tích hợp Trí tuệ nhân tạo") ||
       line.includes("CB1") ||
+      line.includes("3.A") ||
+      line.includes("3.B") ||
+      line.includes("3.C") ||
+      line.includes("3.D") ||
       line.includes("[Mã");
 
     children.push(

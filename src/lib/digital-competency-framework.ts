@@ -1,12 +1,20 @@
 /**
- * BẢNG MÃ CHỈ BÁO NĂNG LỰC SỐ LỚP 1, 2, 3 (CẤP TIỂU HỌC)
- * Nguồn: Phụ lục Công văn 3456/BGDĐT & Khung Năng lực số người học
+ * BẢNG MÃ CHỈ BÁO NĂNG LỰC SỐ VÀ TRÍ TUỆ NHÂN TẠO AI LỚP 3
+ * - Bảng chỉ báo NLS Lớp 1-3: Phụ lục Công văn 3456/BGDĐT
+ * - Bảng chỉ báo AI Lớp 3: Phụ lục Công văn 2422/BGDĐT
  */
 
 export interface IndicatorItem {
   code: string;
   domainId: number;
   domainName: string;
+  description: string;
+}
+
+export interface AIIndicatorItem {
+  code: string;
+  strandId: string;
+  strandName: string;
   description: string;
 }
 
@@ -17,6 +25,14 @@ export interface DomainGroup {
   indicators: IndicatorItem[];
 }
 
+export interface AIStrandGroup {
+  id: string;
+  name: string;
+  description: string;
+  indicators: AIIndicatorItem[];
+}
+
+// 52 MÃ CHỈ BÁO NĂNG LỰC SỐ LỚP 1-3 (PL CV 3456)
 export const PRIMARY_DIGITAL_INDICATORS: IndicatorItem[] = [
   // Miền 1: Thông tin và dữ liệu
   { code: "1.1.CB1a", domainId: 1, domainName: "Thông tin và dữ liệu", description: "Xác định được nhu cầu thông tin, tìm kiếm dữ liệu, thông tin và nội dung thông qua tìm kiếm đơn giản trong môi trường số." },
@@ -72,7 +88,7 @@ export const PRIMARY_DIGITAL_INDICATORS: IndicatorItem[] = [
   { code: "5.4.CB1a", domainId: 5, domainName: "Giải quyết vấn đề", description: "Nhận ra được NLS của tôi cần được cải thiện hoặc cập nhật ở đâu." },
   { code: "5.4.CB1b", domainId: 5, domainName: "Giải quyết vấn đề", description: "Xác định được nơi để tìm kiếm cơ hội phát triển bản thân và cập nhật sự phát triển công nghệ số." },
 
-  // Miền 6: Trí tuệ nhân tạo (AI)
+  // Miền 6: Trí tuệ nhân tạo (AI) trong khung NLS
   { code: "6.1.CB1a", domainId: 6, domainName: "Trí tuệ nhân tạo (AI)", description: "Xác định được các khái niệm cơ bản của AI." },
   { code: "6.1.CB1b", domainId: 6, domainName: "Trí tuệ nhân tạo (AI)", description: "Nhớ lại được các ứng dụng đơn giản của AI trong cuộc sống hàng ngày." },
   { code: "6.2.CB1a", domainId: 6, domainName: "Trí tuệ nhân tạo (AI)", description: "Nhận diện được các công cụ AI đơn giản." },
@@ -121,12 +137,82 @@ export const DOMAIN_GROUPS: DomainGroup[] = [
   },
 ];
 
+// 32 MÃ CHỈ BÁO TRÍ TUỆ NHÂN TẠO (AI) LỚP 3 (PL CV 2422)
+export const PRIMARY_AI_INDICATORS: AIIndicatorItem[] = [
+  // Mạch A: Ứng dụng AI trong học tập và trường học
+  { code: "3.A1.1", strandId: "A", strandName: "Mạch A: Ứng dụng AI trong học tập & trường học", description: "Nhận biết được một số tình huống sử dụng AI hỗ trợ học sinh trong quá trình học tập." },
+  { code: "3.A1.2", strandId: "A", strandName: "Mạch A: Ứng dụng AI trong học tập & trường học", description: "Nêu được cách sử dụng trợ lí học tập thông minh, ứng dụng học ngôn ngữ để hỗ trợ quá trình học tập." },
+  { code: "3.A1.MR1", strandId: "A", strandName: "Mạch A: Ứng dụng AI trong học tập & trường học", description: "Thực hành sử dụng trợ lí học tập thông minh, ứng dụng học ngôn ngữ." },
+  { code: "3.A1.3", strandId: "A", strandName: "Mạch A: Ứng dụng AI trong học tập & trường học", description: "Phân biệt được giữa việc sử dụng AI như công cụ hỗ trợ (đúng đắn, chủ động, có kiểm soát) và việc để AI làm thay toàn bộ (thụ động, thiếu tự lập)." },
+  { code: "3.A1.MR2", strandId: "A", strandName: "Mạch A: Ứng dụng AI trong học tập & trường học", description: "Nêu được hậu quả của việc phụ thuộc quá mức vào AI, như: giảm khả năng tư duy độc lập và sáng tạo; mất dần kĩ năng giải quyết vấn đề; ảnh hưởng đến sự tự tin và bản lĩnh cá nhân." },
+  { code: "3.A1.4", strandId: "A", strandName: "Mạch A: Ứng dụng AI trong học tập & trường học", description: "Nêu được một số tình huống có thể gây rủi ro hoặc hậu quả không mong muốn khi sử dụng AI." },
+  { code: "3.A1.5", strandId: "A", strandName: "Mạch A: Ứng dụng AI trong học tập & trường học", description: "Trả lời được một câu hỏi trước khi quyết định sử dụng AI trong một tình huống cụ thể, ví dụ: Việc này có cần dùng AI không? Nếu AI đưa ra kết quả sai thì điều gì có thể xảy ra? …" },
+  { code: "3.A1.MR3", strandId: "A", strandName: "Mạch A: Ứng dụng AI trong học tập & trường học", description: "Giải thích được rằng việc suy nghĩ và kiểm tra trước khi dùng AI giúp con người phòng tránh rủi ro, bảo vệ an toàn và quyền riêng tư, đồng thời đảm bảo AI được sử dụng vì mục đích tốt." },
+  { code: "3.A2.1", strandId: "A", strandName: "Mạch A: Ứng dụng AI trong học tập & trường học", description: "Nhận biết được một số ứng dụng hoặc thiết bị có sử dụng AI trong trường học, chẳng hạn như: robot hoặc bảng thông minh, ứng dụng chấm bài hoặc nhận dạng chữ viết." },
+  { code: "3.A2.2", strandId: "A", strandName: "Mạch A: Ứng dụng AI trong học tập & trường học", description: "Nêu được mục đích của việc sử dụng AI trong trường học là hỗ trợ giáo viên và học sinh học tập hiệu quả hơn, giúp: cá nhân hoá việc học theo năng lực từng học sinh; tăng hứng thú học tập thông qua các hoạt động tương tác." },
+  { code: "3.A2.MR1", strandId: "A", strandName: "Mạch A: Ứng dụng AI trong học tập & trường học", description: "Hình dung và mô tả được trường học trong tương lai nơi có sự xuất hiện của một số ứng dụng, thiết bị AI." },
+  { code: "3.A2.MR2", strandId: "A", strandName: "Mạch A: Ứng dụng AI trong học tập & trường học", description: "Đề xuất được một số nguyên tắc khi sử dụng AI trong học tập." },
+  { code: "3.A2.3", strandId: "A", strandName: "Mạch A: Ứng dụng AI trong học tập & trường học", description: "Nêu được các đối tượng trong trường học mà AI có thể hỗ trợ, bao gồm: học sinh, giáo viên, …" },
+  { code: "3.A2.MR3", strandId: "A", strandName: "Mạch A: Ứng dụng AI trong học tập & trường học", description: "Nêu được mục tiêu của AI trong bối cảnh trường học là hỗ trợ tất cả các thành viên của nhà trường, giúp việc dạy và học trở nên dễ dàng, hiệu quả và công bằng hơn." },
+  { code: "3.A3.1", strandId: "A", strandName: "Mạch A: Ứng dụng AI trong học tập & trường học", description: "Nêu được một số ví dụ cụ thể về việc AI có thể sai, như: ứng dụng dịch sai nghĩa từ hoặc câu; AI nhận diện nhầm hình ảnh hoặc khuôn mặt; chatbot đưa ra thông tin không đúng sự thật." },
+  { code: "3.A3.2", strandId: "A", strandName: "Mạch A: Ứng dụng AI trong học tập & trường học", description: "Trình bày được rằng khi sử dụng AI, học sinh cần kiểm tra lại kết quả, so sánh với nhiều nguồn thông tin khác nhau và trao đổi với giáo viên hoặc người lớn để xác minh." },
+
+  // Mạch B: Đạo đức, sự thật và trách nhiệm khi sử dụng AI
+  { code: "3.B2.1", strandId: "B", strandName: "Mạch B: Đạo đức, sự thật & trách nhiệm", description: "Nhận biết và nêu được ví dụ về việc thông tin hoặc sản phẩm do AI tạo ra có thể không đúng với sự thật." },
+  { code: "3.B3.1", strandId: "B", strandName: "Mạch B: Đạo đức, sự thật & trách nhiệm", description: "Nhận biết được rằng không nên tạo ra hoặc sử dụng AI cho các mục đích xấu như lừa đảo, bắt nạt hay gây hại cho người khác." },
+  { code: "3.B3.MR1", strandId: "B", strandName: "Mạch B: Đạo đức, sự thật & trách nhiệm", description: "Nêu được rằng con người cần cung cấp dữ liệu đúng và đa dạng để AI hoạt động chính xác, công bằng." },
+
+  // Mạch C: Dữ liệu, cấu trúc logic và Học máy
+  { code: "3.C4.1", strandId: "C", strandName: "Mạch C: Dữ liệu, logic & Học máy", description: "Trình bày được khái niệm dữ liệu thông qua một số ví dụ." },
+  { code: "3.C4.MR1", strandId: "C", strandName: "Mạch C: Dữ liệu, logic & Học máy", description: "Phân biệt được đặc trưng và thuộc tính của dữ liệu." },
+  { code: "3.C5.1", strandId: "C", strandName: "Mạch C: Dữ liệu, logic & Học máy", description: "Mô tả được cấu trúc nếu … thì … trong việc giải quyết tình huống hoặc phân loại." },
+  { code: "3.C5.MR1", strandId: "C", strandName: "Mạch C: Dữ liệu, logic & Học máy", description: "Nêu được một số công cụ AI đơn giản sử dụng cấu trúc 'nếu … thì …'." },
+  { code: "3.C5.2", strandId: "C", strandName: "Mạch C: Dữ liệu, logic & Học máy", description: "Nêu được đặc điểm chính của học máy là học trên dữ liệu." },
+  { code: "3.C5.3", strandId: "C", strandName: "Mạch C: Dữ liệu, logic & Học máy", description: "Nêu được một số tình huống có thể áp dụng học máy như phân loại rau củ trong nông trại thông minh, dự báo mưa lũ." },
+  { code: "3.C5.4", strandId: "C", strandName: "Mạch C: Dữ liệu, logic & Học máy", description: "Nhận biết được bài toán học máy phân loại và bài toán học máy dự đoán thông qua tình huống cụ thể." },
+  { code: "3.C5.MR2", strandId: "C", strandName: "Mạch C: Dữ liệu, logic & Học máy", description: "Minh họa được bài toán học máy phân loại và bài toán học máy dự đoán bằng các công cụ mã nguồn mở hoặc miễn phí, chẳng hạn: Teachable Machine, Google Colab hoặc các ứng dụng AI học máy trực tuyến tương tự." },
+
+  // Mạch D: Huấn luyện AI và chất lượng dữ liệu
+  { code: "3.D1.1", strandId: "D", strandName: "Mạch D: Huấn luyện AI & Chất lượng dữ liệu", description: "Trình bày được quá trình đơn giản để huấn luyện AI gồm các bước: thu thập ví dụ và cho AI học từ các ví dụ đó." },
+  { code: "3.D2.1", strandId: "D", strandName: "Mạch D: Huấn luyện AI & Chất lượng dữ liệu", description: "Nêu được rằng dữ liệu dùng để dạy AI có thể bị thiếu, nhầm lẫn hoặc không đúng sự thật." },
+  { code: "3.D2.2", strandId: "D", strandName: "Mạch D: Huấn luyện AI & Chất lượng dữ liệu", description: "Nêu được một số yêu cầu cơ bản đối với dữ liệu dùng để huấn luyện AI." },
+  { code: "3.D2.MR1", strandId: "D", strandName: "Mạch D: Huấn luyện AI & Chất lượng dữ liệu", description: "Thực hành kiểm tra một bộ thẻ dữ liệu mẫu và loại bỏ được các thẻ gán nhãn nhầm, thẻ không đúng sự thật." },
+  { code: "3.D2.3", strandId: "D", strandName: "Mạch D: Huấn luyện AI & Chất lượng dữ liệu", description: "Trình bày được rằng nếu dữ liệu sai hoặc không tốt thì AI sẽ không hiệu quả, thậm chí hoạt động sai." },
+];
+
+export const AI_STRAND_GROUPS: AIStrandGroup[] = [
+  {
+    id: "A",
+    name: "Mạch A: Ứng dụng AI trong học tập và trường học",
+    description: "Nhận biết tình huống dùng AI, nguyên tắc sử dụng và phòng ngừa rủi ro sai sót của AI.",
+    indicators: PRIMARY_AI_INDICATORS.filter((i) => i.strandId === "A"),
+  },
+  {
+    id: "B",
+    name: "Mạch B: Đạo đức, sự thật và trách nhiệm khi dùng AI",
+    description: "Thông tin do AI tạo ra, không dùng AI vào mục đích xấu và yêu cầu về dữ liệu đúng.",
+    indicators: PRIMARY_AI_INDICATORS.filter((i) => i.strandId === "B"),
+  },
+  {
+    id: "C",
+    name: "Mạch C: Dữ liệu, cấu trúc logic và Học máy",
+    description: "Khái niệm dữ liệu, cấu trúc nếu...thì..., học máy phân loại và dự đoán (Teachable Machine).",
+    indicators: PRIMARY_AI_INDICATORS.filter((i) => i.strandId === "C"),
+  },
+  {
+    id: "D",
+    name: "Mạch D: Huấn luyện AI và chất lượng dữ liệu",
+    description: "Quá trình huấn luyện AI, kiểm tra thẻ dữ liệu mẫu và tác hại của dữ liệu sai lệch.",
+    indicators: PRIMARY_AI_INDICATORS.filter((i) => i.strandId === "D"),
+  },
+];
+
 export const PRIMARY_EDTECH_TOOLS = [
-  { name: "PowerPoint / Canva Tương Tác", category: "Trò chơi lật ô chữ, vòng quay may mắn, kéo thả", url: "https://www.canva.com" },
-  { name: "Quizizz / Wordwall / Blooket", category: "Trò chơi học tập tương tác trực quan cho học sinh tiểu học", url: "https://wordwall.net" },
-  { name: "Hành Trang Số / Hoc10", category: "Sách giáo khoa điện tử, video bài giảng, hình ảnh động của Bộ GD&ĐT", url: "https://hanhtrangso.nxbgd.vn" },
-  { name: "Padlet / Linoit", category: "Bảng đính tranh ảnh, lời khen, sản phẩm học sinh", url: "https://padlet.com" },
-  { name: "Paint / Tux Paint / ScratchJr", category: "Phần mềm vẽ tranh và lập trình kéo thả đơn giản cho tiểu học", url: "https://www.scratchjr.org" },
-  { name: "YouTube Kids / Video khoa học", category: "Video tư liệu thực tế, hình ảnh trực quan động vật, thiên nhiên", url: "https://www.youtubekids.com" },
-  { name: "Phần mềm tương tác bảng thông minh", category: "ActivInspire, ClassDojo, Smart Notebook", url: "https://www.classdojo.com" },
+  { name: "Hành Trang Số / Hoc10", category: "SGK điện tử, video bài giảng, hình ảnh động của Bộ GD&ĐT", url: "https://hanhtrangso.nxbgd.vn" },
+  { name: "Teachable Machine (Google)", category: "Công cụ AI học máy trực quan nhận diện hình ảnh/âm thanh cho HS", url: "https://teachablemachine.withgoogle.com" },
+  { name: "Wordwall / Quizizz / Blooket", category: "Trò chơi học tập tương tác trực quan cho học sinh tiểu học", url: "https://wordwall.net" },
+  { name: "Canva Giáo Dục / PowerPoint", category: "Thiết kế bài giảng tương tác, trò chơi lật mảnh ghép, vòng quay", url: "https://www.canva.com" },
+  { name: "ScratchJr / Blockly", category: "Lập trình kéo thả, mô tả thuật toán nếu... thì... cho tiểu học", url: "https://www.scratchjr.org" },
+  { name: "Padlet / Linoit", category: "Bảng cộng tác số trưng bày tranh vẽ, bài viết của học sinh", url: "https://padlet.com" },
+  { name: "YouTube Kids / Khám phá khoa học", category: "Video tư liệu thực tế, hình ảnh trực quan động vật, thiên nhiên", url: "https://www.youtubekids.com" },
 ];

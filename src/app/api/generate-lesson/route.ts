@@ -1,24 +1,30 @@
 import { NextResponse } from "next/server";
 import { generateLessonWithGemini } from "@/lib/gemini";
 
-export const maxDuration = 60; // Allow up to 60s for LLM processing on Vercel
+export const maxDuration = 60; // Up to 60s for Vercel Serverless
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const {
       subject,
-      grade,
+      grade = "Lớp 3",
       lessonTitle,
-      duration = "1 tiết (45 phút)",
+      duration = "1 tiết (35 phút)",
       learningObjectives,
-      infrastructureLevel = "Máy chiếu của giáo viên",
+      infrastructureLevel = "Ti vi / Màn hình tương tác",
+      integrateDigital = true,
+      integrateAI = true,
+      selectedNLS = [],
+      selectedAI = [],
+      teacherSuggestions = "",
+      uploadedPlanContent = "",
       apiKey,
     } = body;
 
-    if (!subject || !grade || !lessonTitle || !learningObjectives) {
+    if (!subject || !lessonTitle) {
       return NextResponse.json(
-        { error: "Vui lòng nhập đầy đủ các thông tin bắt buộc: Môn học, Khối lớp, Tên bài dạy và Yêu cầu cần đạt." },
+        { error: "Vui lòng chọn Môn học và nhập Tên bài dạy." },
         { status: 400 }
       );
     }
@@ -29,8 +35,14 @@ export async function POST(req: Request) {
       grade,
       lessonTitle,
       duration,
-      learningObjectives,
+      learningObjectives: learningObjectives || "Theo chuẩn kiến thức kĩ năng môn học",
       infrastructureLevel,
+      integrateDigital,
+      integrateAI,
+      selectedNLS,
+      selectedAI,
+      teacherSuggestions,
+      uploadedPlanContent,
     });
 
     return NextResponse.json({
