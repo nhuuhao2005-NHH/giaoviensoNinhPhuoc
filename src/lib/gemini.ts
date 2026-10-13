@@ -8,10 +8,10 @@ export async function generateLessonWithGemini({
   apiKey,
   subject,
   grade = "Lớp 3",
-  lessonTitle,
-  duration,
-  learningObjectives,
-  infrastructureLevel,
+  lessonTitle = "",
+  duration = "1 tiết (35 phút)",
+  learningObjectives = "",
+  infrastructureLevel = "Ti vi / Màn hình tương tác",
   integrateDigital = true,
   integrateAI = true,
   selectedNLS = [],
@@ -22,10 +22,10 @@ export async function generateLessonWithGemini({
   apiKey?: string;
   subject: string;
   grade?: string;
-  lessonTitle: string;
-  duration: string;
-  learningObjectives: string;
-  infrastructureLevel: string;
+  lessonTitle?: string;
+  duration?: string;
+  learningObjectives?: string;
+  infrastructureLevel?: string;
   integrateDigital?: boolean;
   integrateAI?: boolean;
   selectedNLS?: string[];
@@ -46,138 +46,143 @@ export async function generateLessonWithGemini({
     model: "gemini-2.5-flash",
   });
 
-  // Indicator lookup for context
-  const nlsContext = PRIMARY_DIGITAL_INDICATORS.map(
-    (i) => `[${i.code}] (${i.domainName}): ${i.description}`
-  ).join("\n");
+  // Map selected indicators with details
+  const selectedNLSDetails = selectedNLS
+    .map((code) => {
+      const found = PRIMARY_DIGITAL_INDICATORS.find((i) => i.code === code);
+      return found ? `[Mã ${found.code}] (${found.domainName}): ${found.description}` : `[Mã ${code}]`;
+    })
+    .join("\n");
 
-  const aiContext = PRIMARY_AI_INDICATORS.map(
-    (i) => `[${i.code}] (${i.strandName}): ${i.description}`
-  ).join("\n");
+  const selectedAIDetails = selectedAI
+    .map((code) => {
+      const found = PRIMARY_AI_INDICATORS.find((i) => i.code === code);
+      return found ? `[Mã ${found.code}] (${found.strandName}): ${found.description}` : `[Mã ${code}]`;
+    })
+    .join("\n");
 
-  const nlsSelectionText =
-    selectedNLS.length > 0
-      ? `GIÁO VIÊN ĐÃ CHỈ ĐỊNH CÁC MÃ NLS SAU (BẮT BUỘC SỬ DỤNG): ${selectedNLS.join(", ")}`
-      : `GIÁO VIÊN CHƯA CHỌN MÃ CỤ THỂ: Hãy tự động chọn 2-3 mã chỉ báo NLS phù hợp nhất từ danh sách NLS Lớp 1-3.`;
+  // Lookup contexts for reference if none selected
+  const nlsReference = PRIMARY_DIGITAL_INDICATORS.slice(0, 15)
+    .map((i) => `[Mã ${i.code}]: ${i.description}`)
+    .join("\n");
 
-  const aiSelectionText =
-    selectedAI.length > 0
-      ? `GIÁO VIÊN ĐÃ CHỈ ĐỊNH CÁC MÃ AI SAU (BẮT BUỘC SỬ DỤNG): ${selectedAI.join(", ")}`
-      : `GIÁO VIÊN CHƯA CHỌN MÃ CỤ THỂ: Hãy tự động chọn 1-2 mã chỉ báo AI phù hợp nhất từ danh sách AI Lớp 3.`;
+  const aiReference = PRIMARY_AI_INDICATORS.slice(0, 10)
+    .map((i) => `[Mã ${i.code}]: ${i.description}`)
+    .join("\n");
+
+  const nlsInstruction = integrateDigital
+    ? selectedNLS.length > 0
+      ? `GIÁO VIÊN ĐÃ CHỌN CÁC MÃ NĂNG LỰC SỐ SAU ĐÂY:
+${selectedNLSDetails}
+* QUY TẮC BẮT BUỘC VỀ NLS:
+- Trong mục "*Tích hợp Năng lực số:", CHỈ ĐƯỢC PHÉP LIỆT KÊ ĐÚNG các mã chỉ báo đã chọn ở trên kèm nội dung của mã và hành vi cụ thể của học sinh.
+- TUYỆT ĐỐI KHÔNG ĐƯỢC TỰ BỊA HOẶC BỔ SUNG THÊM BẤT KỲ MÃ CHỈ BÁO NÀO KHÁC NGOÀI DANH SÁCH NÀY!`
+      : `GIÁO VIÊN CHỌN TÍCH HỢP NLS NHƯNG CHƯA CHỈ ĐỊNH MÃ CỤ THỂ:
+Hãy chọn đúng 1 đến 2 mã chỉ báo NLS phù hợp nhất từ khung chuẩn Lớp 1-3 và ghi rõ mã kèm hành vi học sinh.`
+    : `KHÔNG TÍCH HỢP NĂNG LỰC SỐ (Bỏ qua hoàn toàn dòng "*Tích hợp Năng lực số:").`;
+
+  const aiInstruction = integrateAI
+    ? selectedAI.length > 0
+      ? `GIÁO VIÊN ĐÃ CHỌN CÁC MÃ TRÍ TUỆ NHÂN TẠO (AI) SAU ĐÂY:
+${selectedAIDetails}
+* QUY TẮC BẮT BUỘC VỀ AI:
+- Trong mục "*Tích hợp AI:", CHỈ ĐƯỢC PHÉP LIỆT KÊ ĐÚNG các mã chỉ báo đã chọn ở trên kèm nội dung của mã và hành vi cụ thể của học sinh.
+- TUYỆT ĐỐI KHÔNG ĐƯỢC TỰ BỊA HOẶC BỔ SUNG THÊM BẤT KỲ MÃ CHỈ BÁO NÀO KHÁC NGOÀI DANH SÁCH NÀY!`
+      : `GIÁO VIÊN CHỌN TÍCH HỢP AI NHƯNG CHƯA CHỈ ĐỊNH MÃ CỤ THỂ:
+Hãy chọn đúng 1 mã chỉ báo AI Lớp 3 phù hợp nhất từ khung chuẩn và ghi rõ mã kèm hành vi học sinh.`
+    : `KHÔNG TÍCH HỢP AI (Bỏ qua hoàn toàn dòng "*Tích hợp AI:").`;
 
   const uploadedPlanNote = uploadedPlanContent
     ? `=== NỘI DUNG KẾ HOẠCH BÀI DẠY GỐC ĐƯỢC TẢI LÊN ===
 ${uploadedPlanContent}
 
-=== HƯỚNG DẪN XỬ LÝ NỘI DUNG TỪ BÀI DẠY GỐC ===
-1. TỰ ĐỘNG TRÍCH XUẤT CHÍNH XÁC TÊN BÀI DẠY từ nội dung bài gốc để ghi vào dòng: BÀI: [TÊN BÀI DẠY].
-2. GIỮ NGUYÊN TOÀN BỘ MỤC "1. Kiến thức" (chứa đầy đủ các Yêu cầu cần đạt của tiết học) từ Kế hoạch bài dạy gốc.
-3. Kế thừa các năng lực chung, năng lực đặc thù và phẩm chất từ bài gốc, bổ sung các dòng *Tích hợp Năng lực số và *Tích hợp Trí tuệ nhân tạo (AI).
-4. Giữ vững tiến trình các hoạt động của bài gốc nhưng cấu trúc lại thành 4 hoạt động chuẩn CV 2345 (chia rõ: Hoạt động của giáo viên | Hoạt động của học sinh) và lồng ghép học liệu số, công cụ AI theo các mã chỉ báo đã chọn.`
+=== HƯỚNG DẪN XỬ LÝ ĐẶC BIỆT TỪ FILE GIÁO ÁN GỐC ===
+1. TÊN BÀI: Tự động trích xuất chính xác Tên bài và Tiết (nếu có) từ file gốc để điền vào dòng tiêu đề "BÀI …: [TÊN BÀI]".
+2. MỤC "1. Kiến thức:": BẮT BUỘC SAO CHÉP ĐẦY ĐỦ VÀ NGUYÊN VẸN toàn bộ các yêu cầu cần đạt về kiến thức, kĩ năng từ mục "1. Kiến thức" của file giáo án gốc tải lên. Không tóm tắt làm mất nội dung chi tiết.
+3. TIẾN TRÌNH HOẠT ĐỘNG: Kế thừa nội dung giảng dạy của bài gốc, nhưng cấu trúc lại thật chuẩn xác theo 4 hoạt động của Công văn 2345/BGDĐT-GDTH và lồng ghép khéo léo các mã chỉ báo NLS/AI đã chọn vào hoạt động của GV và HS.
+(LƯU Ý: Nếu bài học là bài luyện tập/ôn tập và bài gốc không có hoạt động Khám phá, thì chuyển thành 3 hoạt động: 1. Khởi động; 2. Luyện tập, thực hành; 3. Vận dụng, trải nghiệm).`
     : "";
 
   const prompt = `
-Bạn là chuyên gia giáo dục Tiểu học tại Ninh Phước, am hiểu sâu sắc Chương trình GDPT 2018 cấp Tiểu học (đặc biệt là khối Lớp 3) và chuyển đổi số sư phạm.
-Nhiệm vụ của bạn là soạn KẾ HOẠCH BÀI DẠY CẤP TIỂU HỌC chuẩn xác 100% THEO ĐÚNG CẤU TRÚC SAU:
+Bạn là chuyên gia giáo dục Tiểu học tại Ninh Phước, chuyên gia hướng dẫn giáo viên thực hiện Công văn 2345/BGDĐT-GDTH và chuyển đổi số sư phạm.
+Nhiệm vụ của bạn là xây dựng KẾ HOẠCH BÀI DẠY chuẩn 100% THEO ĐÚNG CẤU TRÚC VÀ QUY CÁCH CỦA FILE MẪU CHUẨN CỦA PHÒNG GIÁO DỤC (KHBD_MAU.docx):
 
-=== CẤU TRÚC KẾ HOẠCH BÀI DẠY BẮT BUỘC (CHUẨN CV 2345) ===
+=== CẤU TRÚC KẾ HOẠCH BÀI DẠY CHUẨN MẪU (KHBD_MAU.docx) ===
 KẾ HOẠCH BÀI DẠY
 MÔN: ${subject.toUpperCase()} ; LỚP: ${grade.toUpperCase()}
-BÀI: ${lessonTitle ? lessonTitle.toUpperCase() : "[TRÍCH XUẤT TỪ KẾ HOẠCH BÀI DẠY GỐC]"}
-Ngày soạn: .../.../...
+BÀI …: ${lessonTitle ? lessonTitle.toUpperCase() : "[TRÍCH XUẤT CHÍNH XÁC TỪ FILE GỐC]"}
+Ngày soạn: … /… /…
 
-I. YÊU CẦU CẦN ĐẠT:
+I. YÊU CẦU CẦN ĐẠT
 1. Kiến thức:
-- Nêu rõ các yêu cầu cần đạt về kiến thức, kĩ năng môn học theo Chương trình GDPT 2018.
-2. Năng lực: (Năng lực tự chủ, tự học; năng lực giao tiếp, hợp tác; năng lực giải quyết vấn đề và sáng tạo; năng lực đặc thù môn học).
-- Năng lực tự chủ, tự học: ...
-- Năng lực giao tiếp, hợp tác: ...
-- Năng lực giải quyết vấn đề và sáng tạo: ...
-- Năng lực đặc thù môn ${subject}: ...
-3. Phẩm chất: (Yêu nước, nhân ái, chăm chỉ, trung thực, trách nhiệm).
+- (Bổ sung đầy đủ theo mục 1. Kiến thức của file giáo án tải lên)
 - ...
+2. Năng lực: Năng lực tự chủ, tự học; năng lực giải quyết vấn đề và sáng tạo; năng lực giao tiếp và hợp tác.
+(Nếu giáo án gốc có nêu Năng lực đặc thù của môn học, hãy bổ sung tiếp sau đó).
+3. Phẩm chất: Phẩm chất yêu nước, nhân ái, chăm chỉ, trách nhiệm.
 ${
   integrateDigital
-    ? `*Tích hợp Năng lực số: (Trích dẫn chính xác mã chỉ báo, ví dụ: [Mã 2.1.CB1a], [Mã 1.1.CB1b]... đi kèm hành vi cụ thể của học sinh tiểu học).`
+    ? `*Tích hợp Năng lực số: (Liệt kê đúng mã được chọn kèm nội dung của mã và hành vi của học sinh tiểu học, KHÔNG liệt kê thêm chỉ báo khác)`
     : ""
 }
 ${
   integrateAI
-    ? `*Tích hợp Trí tuệ nhân tạo (AI): (Trích dẫn chính xác mã chỉ báo AI Lớp 3, ví dụ: [Mã 3.A1.1], [Mã 3.A2.1], [Mã 3.C5.1]... đi kèm hành vi cụ thể của học sinh).`
+    ? `*Tích hợp AI: (Liệt kê đúng mã được chọn kèm nội dung của mã và hành vi của học sinh tiểu học, KHÔNG liệt kê thêm chỉ báo khác)`
     : ""
 }
 
-II. ĐỒ DÙNG DẠY HỌC: Phân định rõ đồ dùng của Giáo viên và đồ dùng của Học sinh.
-1. Giáo viên:
-- Ti vi/máy chiếu, bài giảng điện tử tương tác...
-- Học liệu số cụ thể (trò chơi tương tác Wordwall/Quizizz/PowerPoint, video tư liệu, công cụ AI/mô phỏng minh họa...).
-2. Học sinh:
-- Sách giáo khoa, vở bài tập, đồ dùng học tập môn học...
-- (Nếu có): Bảng con, thẻ học tập hoặc thiết bị theo nhóm.
+II. ĐỒ DÙNG DẠY HỌC:
+- Giáo viên: …. (chắt lọc trọng tâm, ngắn gọn, phù hợp với thiết bị: ${infrastructureLevel}, bài giảng số, học liệu điện tử...)
+- Học sinh: …. (chắt lọc trọng tâm, ngắn gọn: SGK, vở bài tập, đồ dùng học tập môn học...)
 
-III. CÁC HOẠT ĐỘNG DẠY HỌC CHỦ YẾU: (Chia thành 2 cột: Hoạt động của giáo viên và Hoạt động của học sinh)
-Gồm 4 hoạt động:
-1. Khởi động (Khoảng 5 phút)
-- Mục tiêu: ... [Ghi rõ mã NLS / AI nếu có tích hợp]
+III. CÁC HOẠT ĐỘNG DẠY HỌC CHỦ YẾU:
+Tiến trình dạy học phải phân định rành mạch giữa Hoạt động của giáo viên và Hoạt động của học sinh theo từng hoạt động:
+
+1. Khởi động: (khoảng 5 phút)
 - Hoạt động của giáo viên:
-  + (Tổ chức hoạt động/trò chơi khởi động gắn với học liệu số...)
+  + (Tổ chức trò chơi, học liệu số tương tác mở đầu bài học, kết nối bài mới...)
 - Hoạt động của học sinh:
-  + (Hào hứng tham gia tương tác, kết nối vào bài mới...)
+  + (Tham gia trò chơi, trả lời câu hỏi, tạo tâm thế tích cực...)
 
-2. Khám phá (Khoảng 12 - 15 phút)
-- Mục tiêu: ... [Ghi rõ mã NLS / AI tích hợp]
+2. Khám phá: (khoảng 15 phút) (LƯU Ý: Nếu bài học không có hoạt động này thì bỏ qua, chuyển sang 2. Luyện tập, thực hành; 3. Vận dụng, trải nghiệm)
 - Hoạt động của giáo viên:
-  + (Trình chiếu tranh ảnh/mô hình/video số, câu hỏi gợi mở, hướng dẫn học sinh thảo luận...)
+  + (Tổ chức cho HS quan sát hình ảnh/video/học liệu số, đặt câu hỏi gợi mở, lồng ghép hoạt động đạt mã [Mã chỉ báo]...)
 - Hoạt động của học sinh:
-  + (Quan sát, thảo luận nhóm, nêu ý kiến, phát hiện kiến thức mới...)
+  + (Quan sát, thảo luận nhóm, trả lời, rút ra kiến thức mới...)
 
-3. Luyện tập, thực hành (Khoảng 10 - 12 phút)
-- Mục tiêu: ... [Ghi rõ mã NLS / AI tích hợp]
+3. Luyện tập, thực hành: (khoảng 10 - 12 phút)
 - Hoạt động của giáo viên:
-  + (Giao bài tập/nhiệm vụ thực hành, tổ chức trò chơi tương tác củng cố...)
+  + (Giao bài tập/nhiệm vụ thực hành, tổ chức trò chơi củng cố, hướng dẫn, nhận xét...)
 - Hoạt động của học sinh:
-  + (Làm bài, thực hành, chữa bài trên bảng lớp/thiết bị, nhận xét...)
+  + (Làm bài tập cá nhân/nhóm, chia sẻ kết quả, nhận xét bạn...)
 
-4. Vận dụng, trải nghiệm (Khoảng 3 - 5 phút)
-- Mục tiêu: ... [Ghi rõ mã NLS / AI tích hợp]
+4. Vận dụng, trải nghiệm: (khoảng 3 - 5 phút)
 - Hoạt động của giáo viên:
-  + (Liên hệ thực tế đời sống, hướng dẫn thói quen an toàn và đạo đức số...)
+  + (Hướng dẫn liên hệ bài học vào thực tế, củng cố dặn dò, lưu ý an toàn số / văn hóa số nếu có...)
 - Hoạt động của học sinh:
-  + (Liên hệ bản thân, chia sẻ câu chuyện, ghi nhớ nhắc nhở...)
+  + (Chia sẻ liên hệ bản thân, ghi nhớ thực hiện...)
 
-IV. ĐIỀU CHỈNH SAU BÀI DẠY (Nếu có): Mục bắt buộc theo CV 2345.
-- ...........................................................................................................................................
-- ...........................................................................................................................................
+IV. ĐIỀU CHỈNH SAU BÀI DẠY (Nếu có):
+......................................................................................................................................................
+......................................................................................................................................................
 
-=== THÔNG TIN BÀI DẠY CỦA GIÁO VIÊN ===
+=== CHỈ ĐẠO TÍCH HỢP CHO BÀI DẠY NÀY ===
 - Môn học: ${subject}
-- Lớp: ${grade}
-- Tên bài dạy: ${lessonTitle}
-- Thời lượng: ${duration}
-- Đồ dùng & Thiết bị hiện có: ${infrastructureLevel}
-- Yêu cầu cần đạt cốt lõi: ${learningObjectives}
-- Tùy chọn tích hợp Năng lực số: ${integrateDigital ? "CÓ" : "KHÔNG"}
-- Tùy chọn tích hợp Trí tuệ nhân tạo (AI): ${integrateAI ? "CÓ" : "KHÔNG"}
-${integrateDigital ? `- Chỉ đạo NLS: ${nlsSelectionText}` : ""}
-${integrateAI ? `- Chỉ đạo AI: ${aiSelectionText}` : ""}
-${
-  teacherSuggestions
-    ? `- GỢI Ý RIÊNG CỦA GIÁO VIÊN: "${teacherSuggestions}" (BẮT BUỘC đưa gợi ý này vào các hoạt động dạy học phù hợp).`
-    : ""
-}
+- Khối lớp: ${grade}
+- Thiết bị & Đồ dùng hiện có: ${infrastructureLevel}
+${teacherSuggestions ? `- Gợi ý riêng của giáo viên: "${teacherSuggestions}"` : ""}
+
+${nlsInstruction}
+
+${aiInstruction}
 
 ${uploadedPlanNote}
 
-=== DANH SÁCH MÃ CHỈ BÁO NLS LỚP 1-3 (PL CV 3456) ===
-${nlsContext}
-
-=== DANH SÁCH MÃ CHỈ BÁO AI LỚP 3 (PL CV 2422) ===
-${aiContext}
-
-=== QUY TẮC SƯ PHẠM QUAN TRỌNG ===
-1. Giữ đúng chính xác định dạng tiêu đề (KẾ HOẠCH BÀI DẠY, I. YÊU CẦU CẦN ĐẠT, II. ĐỒ DÙNG DẠY HỌC, III. CÁC HOẠT ĐỘNG DẠY HỌC CHỦ YẾU, IV. ĐIỀU CHỈNH SAU BÀI DẠY (Nếu có)).
-2. Phân tách rành mạch hai phần: "- Hoạt động của giáo viên:" và "- Hoạt động của học sinh:" trong từng hoạt động của mục III.
-3. Hoạt động tích hợp phải thiết thực, sinh động, phù hợp lứa tuổi học sinh Tiểu học (${grade}).
+=== QUY TẮC CỐT LÕI BẮT BUỘC ===
+1. TUYỆT ĐỐI TUÂN THỦ cấu trúc và từng đề mục như trên.
+2. Mục "2. Năng lực:" và "3. Phẩm chất:" phải giữ đúng văn phong chuẩn mực của file KHBD_MAU.docx.
+3. Không tự ý bịa thêm mã chỉ báo NLS hoặc AI ngoài những mã giáo viên đã chỉ định.
+4. Trong mỗi hoạt động ở Mục III, bắt buộc có đủ 2 phần rõ ràng: "- Hoạt động của giáo viên:" và "- Hoạt động của học sinh:".
 `;
 
   try {

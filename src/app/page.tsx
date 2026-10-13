@@ -32,79 +32,86 @@ import {
 } from "@/lib/digital-competency-framework";
 import { exportLessonToWord } from "@/lib/export-docx";
 
-// PRESETS CHO LỚP 3
-const GRADE3_PRESETS = [
-  {
-    subject: "Tin học và Công nghệ",
-    lessonTitle: "Bài 1: Thông tin và sự tiếp nhận thông tin quanh em",
-    duration: "1 tiết (35 phút)",
-    infrastructureLevel: "Phòng máy tính",
-    learningObjectives:
-      "Nhận biết được thông tin thu nhận qua các giác quan; nhận biết thiết bị số hỗ trợ thu nhận thông tin (hình ảnh, âm thanh). Biết cách ngồi đúng tư thế khi dùng máy tính.",
-    teacherSuggestions:
-      "Sử dụng trò chơi tương tác phân loại các dạng thông tin; giới thiệu bảng thông minh hoặc robot hỗ trợ học tập.",
-    integrateDigital: true,
-    integrateAI: true,
-    nls: ["1.1.CB1a", "4.1.CB1a", "5.1.CB1a"],
-    ai: ["3.A1.1", "3.A2.1"],
-  },
-  {
-    subject: "Tự nhiên và Xã hội",
-    lessonTitle: "Bài 15: Cơ quan tiêu hóa",
-    duration: "2 tiết (70 phút)",
-    infrastructureLevel: "Ti vi / Màn hình tương tác",
-    learningObjectives:
-      "Chỉ và nói được tên các bộ phận chính của cơ quan tiêu hóa trên sơ đồ/mô hình 3D số. Nêu được chức năng chính của cơ quan tiêu hóa và hình thành thói quen ăn uống lành mạnh.",
-    teacherSuggestions:
-      "Trình chiếu video mô phỏng 3D dạ dày và đường tiêu hóa; cho học sinh tương tác ghép nối các bộ phận trên màn hình ti vi thông minh.",
-    integrateDigital: true,
-    integrateAI: true,
-    nls: ["1.1.CB1b", "2.1.CB1a"],
-    ai: ["3.A1.2", "3.A3.1"],
-  },
-  {
-    subject: "Toán",
-    lessonTitle: "Bài 28: Bảng nhân 7, Bảng chia 7",
-    duration: "1 tiết (35 phút)",
-    infrastructureLevel: "Máy chiếu của giáo viên",
-    learningObjectives:
-      "Thành lập và ghi nhớ Bảng nhân 7, Bảng chia 7; vận dụng tính nhẩm và giải bài toán thực tế liên quan.",
-    teacherSuggestions:
-      "Tổ chức trò chơi Wordwall/Quizizz tiếp sức đua xe tính nhẩm; gợi ý học sinh nhận biết máy móc/AI tính toán tự động nhưng con người cần rèn luyện tư duy độc lập.",
-    integrateDigital: true,
-    integrateAI: true,
-    nls: ["2.1.CB1a", "5.2.CB1b"],
-    ai: ["3.A1.3", "3.A3.2"],
-  },
-  {
-    subject: "Tiếng Việt",
-    lessonTitle: "Bài đọc: Cổng trường mở ra",
-    duration: "2 tiết (70 phút)",
-    infrastructureLevel: "Ti vi / Màn hình tương tác",
-    learningObjectives:
-      "Đọc đúng, diễn cảm bài văn; hiểu tâm trạng của người mẹ trước ngày khai trường của con. Biết chia sẻ tình cảm yêu thương gia đình.",
-    teacherSuggestions:
-      "Chiếu tranh ảnh/video ngày khai trường xưa và nay; hướng dẫn học sinh tạo câu chúc tặng mẹ trên bảng tương tác Padlet.",
-    integrateDigital: true,
-    integrateAI: false,
-    nls: ["1.1.CB1b", "3.1.CB1b"],
-    ai: [],
-  },
-  {
-    subject: "Đạo đức",
-    lessonTitle: "Bài 4: Tôn trọng sự khác biệt của người khác",
-    duration: "1 tiết (35 phút)",
-    infrastructureLevel: "Ti vi / Màn hình tương tác",
-    learningObjectives:
-      "Nhận biết được mỗi người có đặc điểm, sở thích khác nhau; biết thể hiện thái độ tôn trọng sự khác biệt trong lớp học và trên môi trường mạng.",
-    teacherSuggestions:
-      "Thảo luận về ứng xử văn minh và không dùng công nghệ, AI để trêu chọc hay làm tổn thương bạn bè.",
-    integrateDigital: true,
-    integrateAI: true,
-    nls: ["2.5.CB1a", "4.3.CB1a"],
-    ai: ["3.B3.1", "3.B2.1"],
-  },
-];
+
+interface PreviewActivity {
+  title: string;
+  teacherLines: string[];
+  studentLines: string[];
+}
+
+function parsePlanForPreview(rawPlan: string) {
+  const lines = rawPlan.split("\n");
+  const beforeSectionIII: string[] = [];
+  const afterSectionIII: string[] = [];
+  const activities: PreviewActivity[] = [];
+  let inIII = false;
+  let inIV = false;
+  let currentAct: PreviewActivity | null = null;
+  let col: "teacher" | "student" = "teacher";
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    if (/^III\.\s*CÁC HOẠT ĐỘNG/i.test(line)) {
+      inIII = true;
+      inIV = false;
+      continue;
+    }
+
+    if (/^IV\.\s*ĐIỀU CHỈNH/i.test(line)) {
+      if (currentAct) {
+        activities.push(currentAct);
+        currentAct = null;
+      }
+      inIII = false;
+      inIV = true;
+      afterSectionIII.push(line);
+      continue;
+    }
+
+    if (inIV) {
+      afterSectionIII.push(line);
+      continue;
+    }
+
+    if (inIII) {
+      if (/^(?:[1-4]\.|\d+\.)\s*(?:Khởi động|Khám phá|Luyện tập|Vận dụng)/i.test(line)) {
+        if (currentAct) activities.push(currentAct);
+        currentAct = { title: line, teacherLines: [], studentLines: [] };
+        col = "teacher";
+        continue;
+      }
+      if (
+        line.startsWith("- Hoạt động của giáo viên:") ||
+        line.startsWith("Hoạt động của giáo viên:") ||
+        line.startsWith("+ Hoạt động của giáo viên:")
+      ) {
+        col = "teacher";
+        continue;
+      }
+      if (
+        line.startsWith("- Hoạt động của học sinh:") ||
+        line.startsWith("Hoạt động của học sinh:") ||
+        line.startsWith("+ Hoạt động của học sinh:")
+      ) {
+        col = "student";
+        continue;
+      }
+      if (currentAct) {
+        if (col === "teacher") currentAct.teacherLines.push(line);
+        else currentAct.studentLines.push(line);
+      }
+      continue;
+    }
+
+    beforeSectionIII.push(line);
+  }
+
+  if (currentAct) activities.push(currentAct);
+
+  return { beforeSectionIII, activities, afterSectionIII };
+}
 
 export default function HomePage() {
   // Input states
@@ -148,6 +155,7 @@ export default function HomePage() {
   const [generatedPlan, setGeneratedPlan] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [copied, setCopied] = useState(false);
+  const [viewMode, setViewMode] = useState<"table" | "text">("table");
   const [isExporting, setIsExporting] = useState(false);
 
   // Tabs (4 tabs)
@@ -166,6 +174,11 @@ export default function HomePage() {
   );
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
+  const parsedPreview = useMemo(() => {
+    if (!generatedPlan) return null;
+    return parsePlanForPreview(generatedPlan);
+  }, [generatedPlan]);
+
   useEffect(() => {
     const savedKey = localStorage.getItem("gemini_api_key");
     if (savedKey) setApiKey(savedKey);
@@ -175,20 +188,6 @@ export default function HomePage() {
     setApiKey(key);
     localStorage.setItem("gemini_api_key", key);
     setShowKeyModal(false);
-  };
-
-  // Preset click handler
-  const handleApplyPreset = (preset: (typeof GRADE3_PRESETS)[0]) => {
-    setSubject(preset.subject);
-    setLessonTitle(preset.lessonTitle);
-    setDuration(preset.duration);
-    setInfrastructureLevel(preset.infrastructureLevel);
-    setLearningObjectives(preset.learningObjectives);
-    setTeacherSuggestions(preset.teacherSuggestions);
-    setIntegrateDigital(preset.integrateDigital);
-    setIntegrateAI(preset.integrateAI);
-    setSelectedNLS(preset.nls);
-    setSelectedAI(preset.ai);
   };
 
   // Toggle selection for NLS
@@ -1239,9 +1238,35 @@ export default function HomePage() {
                 </button>
               </div>
 
-              {/* ACTION BUTTONS: Sao chép & Tải Word */}
+              {/* ACTION BUTTONS: Chế độ xem, Sao chép & Tải Word */}
               {generatedPlan && activeTab === "result" && (
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center flex-wrap gap-2">
+                  {/* Toggle xem Bảng 2 cột / Văn bản */}
+                  <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 text-xs font-medium">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("table")}
+                      className={`px-2.5 py-1 rounded-md transition ${
+                        viewMode === "table"
+                          ? "bg-white text-orange-700 font-bold shadow-xs"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      Bảng 2 cột (CV 2345)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("text")}
+                      className={`px-2.5 py-1 rounded-md transition ${
+                        viewMode === "text"
+                          ? "bg-white text-orange-700 font-bold shadow-xs"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      Văn bản
+                    </button>
+                  </div>
+
                   <button
                     onClick={handleCopy}
                     className="flex items-center space-x-1 px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition"
@@ -1250,7 +1275,7 @@ export default function HomePage() {
                     {copied ? (
                       <>
                         <Check className="w-3.5 h-3.5 text-emerald-600" />
-                        <span className="text-emerald-700">Đã chép</span>
+                        <span className="text-emerald-700 font-bold">Đã chép</span>
                       </>
                     ) : (
                       <>
@@ -1294,12 +1319,179 @@ export default function HomePage() {
                     <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-start space-x-2 text-emerald-800 text-xs">
                       <Check className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
                       <div>
-                        <strong>Kế hoạch bài dạy Lớp 3 chuẩn CV 2345 đã hoàn thành!</strong> Đã tích hợp các mã chỉ báo NLS &amp; AI và phân chia 2 cột Hoạt động của GV và HS. Bấm <strong>&quot;Tải Word (CV 2345)&quot;</strong> để nhận file in ấn.
+                        <strong>Kế hoạch bài dạy Lớp 3 chuẩn CV 2345 đã hoàn thành!</strong> Cấu trúc theo mẫu chuẩn <code>KHBD_MAU.docx</code>, tích hợp mã chỉ báo NLS &amp; AI và phân định Bảng 2 cột Hoạt động của GV &amp; HS. Bấm <strong>&quot;Tải Word (CV 2345)&quot;</strong> để nhận file in ấn.
                       </div>
                     </div>
-                    <pre className="whitespace-pre-wrap font-sans text-slate-800 leading-relaxed bg-slate-50/70 p-4 rounded-xl border border-slate-200 text-xs sm:text-sm">
-                      {generatedPlan}
-                    </pre>
+
+                    {viewMode === "text" ? (
+                      <pre className="whitespace-pre-wrap font-sans text-slate-800 leading-relaxed bg-slate-50/70 p-4 rounded-xl border border-slate-200 text-xs sm:text-sm">
+                        {generatedPlan}
+                      </pre>
+                    ) : (
+                      /* CHẾ ĐỘ XEM BẢNG 2 CỘT CHUẨN CV 2345 */
+                      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-4 font-serif text-slate-900">
+                        {parsedPreview && (
+                          <>
+                            {/* PHẦN ĐẦU: TIÊU ĐỀ, MỤC I & MỤC II */}
+                            <div className="space-y-1.5">
+                              {parsedPreview.beforeSectionIII.map((line, idx) => {
+                                const isHeader =
+                                  line.startsWith("KẾ HOẠCH BÀI DẠY") ||
+                                  line.startsWith("MÔN:") ||
+                                  line.startsWith("BÀI") ||
+                                  line.startsWith("Ngày soạn:");
+                                const isSectionIorII =
+                                  line.startsWith("I. YÊU CẦU CẦN ĐẠT") ||
+                                  line.startsWith("II. ĐỒ DÙNG DẠY HỌC");
+                                const isSubHeader =
+                                  line.startsWith("1. Kiến thức") ||
+                                  line.startsWith("2. Năng lực") ||
+                                  line.startsWith("3. Phẩm chất") ||
+                                  line.startsWith("- Giáo viên:") ||
+                                  line.startsWith("- Học sinh:");
+                                const isNLS = line.startsWith("*Tích hợp Năng lực số:");
+                                const isAI = line.startsWith("*Tích hợp AI:") || line.startsWith("*Tích hợp Trí tuệ");
+
+                                if (isHeader) {
+                                  return (
+                                    <div
+                                      key={idx}
+                                      className={`text-center ${
+                                        line.startsWith("KẾ HOẠCH BÀI DẠY")
+                                          ? "font-extrabold text-base text-slate-900"
+                                          : line.startsWith("BÀI")
+                                          ? "font-bold text-sm text-red-700"
+                                          : line.startsWith("Ngày soạn")
+                                          ? "italic text-xs text-slate-500 mb-3"
+                                          : "font-bold text-sm text-slate-800"
+                                      }`}
+                                    >
+                                      {line}
+                                    </div>
+                                  );
+                                }
+
+                                if (isSectionIorII) {
+                                  return (
+                                    <h3
+                                      key={idx}
+                                      className="font-bold text-sm text-slate-900 pt-2 border-t border-slate-100"
+                                    >
+                                      {line}
+                                    </h3>
+                                  );
+                                }
+
+                                if (isNLS) {
+                                  return (
+                                    <div
+                                      key={idx}
+                                      className="font-semibold text-xs text-emerald-800 bg-emerald-50/70 p-2 rounded-lg border border-emerald-200"
+                                    >
+                                      {line}
+                                    </div>
+                                  );
+                                }
+
+                                if (isAI) {
+                                  return (
+                                    <div
+                                      key={idx}
+                                      className="font-semibold text-xs text-indigo-800 bg-indigo-50/70 p-2 rounded-lg border border-indigo-200"
+                                    >
+                                      {line}
+                                    </div>
+                                  );
+                                }
+
+                                if (isSubHeader) {
+                                  return (
+                                    <p key={idx} className="font-semibold text-xs text-slate-800">
+                                      {line}
+                                    </p>
+                                  );
+                                }
+
+                                return (
+                                  <p key={idx} className="text-xs text-slate-700 pl-3">
+                                    {line}
+                                  </p>
+                                );
+                              })}
+                            </div>
+
+                            {/* PHẦN III: BẢNG 2 CỘT CÁC HOẠT ĐỘNG DẠY HỌC */}
+                            <div className="pt-3">
+                              <h3 className="font-bold text-sm text-slate-900 mb-2">
+                                III. CÁC HOẠT ĐỘNG DẠY HỌC CHỦ YẾU:
+                              </h3>
+                              <div className="overflow-x-auto border border-slate-300 rounded-lg">
+                                <table className="w-full border-collapse text-xs">
+                                  <thead>
+                                    <tr className="bg-slate-100 border-b border-slate-300 text-slate-900">
+                                      <th className="w-1/2 p-2.5 text-center font-bold border-r border-slate-300">
+                                        Hoạt động của giáo viên
+                                      </th>
+                                      <th className="w-1/2 p-2.5 text-center font-bold">
+                                        Hoạt động của học sinh
+                                      </th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-300">
+                                    {parsedPreview.activities.map((act, aIdx) => (
+                                      <tr key={aIdx} className="align-top">
+                                        <td className="p-3 border-r border-slate-300 bg-white space-y-1.5">
+                                          <div className="font-bold text-slate-900 pb-1 border-b border-slate-100 text-xs">
+                                            {act.title}
+                                          </div>
+                                          {act.teacherLines.map((tl, tIdx) => (
+                                            <p
+                                              key={tIdx}
+                                              className="text-slate-800 leading-relaxed text-xs"
+                                            >
+                                              {tl}
+                                            </p>
+                                          ))}
+                                        </td>
+                                        <td className="p-3 bg-white space-y-1.5">
+                                          <div className="text-transparent select-none pb-1 border-b border-transparent text-xs">
+                                            &nbsp;
+                                          </div>
+                                          {act.studentLines.map((sl, sIdx) => (
+                                            <p
+                                              key={sIdx}
+                                              className="text-slate-800 leading-relaxed text-xs"
+                                            >
+                                              {sl}
+                                            </p>
+                                          ))}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+
+                            {/* PHẦN IV: ĐIỀU CHỈNH SAU BÀI DẠY */}
+                            <div className="pt-2 space-y-1">
+                              {parsedPreview.afterSectionIII.map((line, idx) => (
+                                <p
+                                  key={idx}
+                                  className={
+                                    line.startsWith("IV.")
+                                      ? "font-bold text-sm text-slate-900 pt-2"
+                                      : "text-slate-400 font-mono text-xs overflow-hidden"
+                                  }
+                                >
+                                  {line}
+                                </p>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="flex-1 flex flex-col items-center justify-center py-20 text-center text-slate-400">
@@ -1308,7 +1500,7 @@ export default function HomePage() {
                       Chưa có nội dung Kế hoạch bài dạy
                     </p>
                     <p className="text-xs text-slate-400 max-w-sm mt-1">
-                      Hãy điền thông tin bài học ở cột bên trái hoặc chọn một bài mẫu Lớp 3 có sẵn để bắt đầu.
+                      Vui lòng chọn Môn học, tải lên file Kế hoạch bài dạy (.docx hoặc .txt) ở cột bên trái và bấm nút &quot;Soạn Kế Hoạch Bài Dạy Chuẩn CV 2345&quot;.
                     </p>
                   </div>
                 )}
