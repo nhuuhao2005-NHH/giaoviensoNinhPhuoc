@@ -20,6 +20,8 @@ import {
   X,
   CheckSquare,
   Square,
+  ArrowLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   PRIMARY_DIGITAL_INDICATORS,
@@ -127,6 +129,8 @@ export default function HomePage() {
   // Modals for indicator selection
   const [showNLSModal, setShowNLSModal] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);
+  const [activeNLSDomain, setActiveNLSDomain] = useState<number | null>(null);
+  const [activeAIStrand, setActiveAIStrand] = useState<string | null>(null);
 
   // File upload state
   const [uploadedFileName, setUploadedFileName] = useState("");
@@ -469,10 +473,11 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* MODAL CHỌN MÃ CHỈ BÁO NĂNG LỰC SỐ (52 mã) */}
+      {/* MODAL CHỌN MÃ CHỈ BÁO NĂNG LỰC SỐ (SẮP XẾP THEO MIỀN NĂNG LỰC) */}
       {showNLSModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 max-h-[85vh] flex flex-col">
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col">
+            {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center space-x-2">
                 <ShieldCheck className="w-5 h-5 text-orange-600" />
@@ -480,75 +485,212 @@ export default function HomePage() {
                   Chọn mã chỉ báo Năng lực số Lớp 3 (PL CV 3456)
                 </h3>
               </div>
-              <span className="text-xs px-2.5 py-1 bg-orange-100 text-orange-800 font-bold rounded-full">
-                Đã chọn: {selectedNLS.length} mã
-              </span>
-            </div>
-
-            <p className="text-xs text-slate-500 my-2">
-              Nhấn 1 lần để chọn, nhấn lần 2 để bỏ chọn. Sau khi chọn xong bấm nút <strong>&quot;Xác nhận&quot;</strong>.
-            </p>
-
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1 my-2">
-              {PRIMARY_DIGITAL_INDICATORS.map((item) => {
-                const isSelected = selectedNLS.includes(item.code);
-                return (
-                  <div
-                    key={item.code}
-                    onClick={() => toggleNLS(item.code)}
-                    className={`p-3 rounded-xl border text-xs cursor-pointer transition flex items-start space-x-3 select-none ${
-                      isSelected
-                        ? "border-orange-500 bg-orange-50/70 text-orange-950 shadow-sm"
-                        : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
-                    }`}
-                  >
-                    <div className="mt-0.5 flex-shrink-0">
-                      {isSelected ? (
-                        <CheckSquare className="w-4 h-4 text-orange-600" />
-                      ) : (
-                        <Square className="w-4 h-4 text-slate-400" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-0.5">
-                        <span className="font-mono font-bold px-1.5 py-0.5 bg-orange-100 text-orange-800 rounded text-[11px]">
-                          {item.code}
-                        </span>
-                        <span className="text-slate-500 text-[11px]">
-                          {item.domainName}
-                        </span>
-                      </div>
-                      <p className="leading-relaxed">{item.description}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="flex items-center justify-between pt-3 border-t border-slate-200">
               <button
                 type="button"
-                onClick={() => setSelectedNLS([])}
-                className="text-xs text-red-600 hover:underline"
+                onClick={() => {
+                  setShowNLSModal(false);
+                  setActiveNLSDomain(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 p-1"
+                title="Đóng"
               >
-                Xóa tất cả lựa chọn
+                <X className="w-5 h-5" />
               </button>
+            </div>
+
+            {/* KHUNG THÔNG BÁO CÁC CHỈ BÁO ĐÃ CHỌN (LUÔN XUẤT HIỆN Ở TRÊN) */}
+            <div className="my-3 p-3 bg-orange-50 border border-orange-200 rounded-xl">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-bold text-orange-950 flex items-center space-x-1.5">
+                  <span>📢 Khung thông báo: Đã chọn</span>
+                  <span className="px-2 py-0.5 bg-orange-200 text-orange-900 rounded-full font-extrabold text-[11px]">
+                    {selectedNLS.length} mã
+                  </span>
+                </span>
+                {selectedNLS.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedNLS([])}
+                    className="text-[11px] text-red-600 hover:underline font-medium"
+                  >
+                    Xóa tất cả
+                  </button>
+                )}
+              </div>
+              {selectedNLS.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pt-1">
+                  {selectedNLS.map((code) => (
+                    <span
+                      key={code}
+                      className="inline-flex items-center space-x-1 bg-white border border-orange-300 text-orange-900 px-2 py-0.5 rounded-lg text-xs font-mono font-bold shadow-xs"
+                    >
+                      <span>{code}</span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleNLS(code);
+                        }}
+                        className="hover:text-red-600 ml-0.5 text-slate-400"
+                        title="Bỏ chọn mã này"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-orange-800/80 italic">
+                  Chưa chọn mã nào. Hãy bấm vào một Miền năng lực bên dưới để lựa chọn.
+                </p>
+              )}
+            </div>
+
+            {/* VÙNG CHỌN CHỈ BÁO (THEO MIỀN NĂNG LỰC) */}
+            <div className="flex-1 overflow-y-auto pr-1 my-1">
+              {activeNLSDomain === null ? (
+                /* CẤP 1: DANH SÁCH 6 MIỀN NĂNG LỰC */
+                <div className="space-y-2">
+                  <p className="text-xs text-slate-500 font-medium mb-1">
+                    Bấm vào một <strong>Miền năng lực</strong> bên dưới để xem và chọn mã chỉ báo:
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {DOMAIN_GROUPS.map((domain) => {
+                      const countSelected = domain.indicators.filter((i) =>
+                        selectedNLS.includes(i.code)
+                      ).length;
+                      return (
+                        <button
+                          key={domain.id}
+                          type="button"
+                          onClick={() => setActiveNLSDomain(domain.id)}
+                          className="p-3.5 rounded-xl border border-slate-200 hover:border-orange-500 bg-white hover:bg-orange-50/30 text-left transition shadow-xs group flex flex-col justify-between"
+                        >
+                          <div>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="font-bold text-xs text-slate-900 group-hover:text-orange-700">
+                                {domain.name}
+                              </span>
+                              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-orange-600 transition group-hover:translate-x-0.5" />
+                            </div>
+                            <p className="text-[11px] text-slate-500 leading-relaxed mb-2 line-clamp-2">
+                              {domain.description}
+                            </p>
+                          </div>
+                          <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px]">
+                            <span className="text-slate-500 font-medium">
+                              {domain.indicators.length} chỉ báo
+                            </span>
+                            {countSelected > 0 && (
+                              <span className="px-2 py-0.5 bg-orange-100 text-orange-800 font-bold rounded-full">
+                                ✓ Đã chọn {countSelected}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                /* CẤP 2: DANH SÁCH CHỈ BÁO TRONG MIỀN ĐANG CHỌN */
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => setActiveNLSDomain(null)}
+                      className="inline-flex items-center space-x-1.5 text-xs font-bold text-orange-700 hover:text-orange-900 bg-orange-100/70 hover:bg-orange-100 px-2.5 py-1.5 rounded-lg transition"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>Quay lại danh sách Miền khác</span>
+                    </button>
+                    <span className="text-xs font-semibold text-slate-600 truncate max-w-[240px]">
+                      {DOMAIN_GROUPS.find((d) => d.id === activeNLSDomain)?.name}
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-slate-500">
+                    Nhấn 1 lần để chọn, nhấn lần 2 để bỏ chọn. Mã chọn sẽ hiện lên Khung thông báo ở trên.
+                  </p>
+
+                  <div className="space-y-2 pt-1">
+                    {DOMAIN_GROUPS.find((d) => d.id === activeNLSDomain)?.indicators.map((item) => {
+                      const isSelected = selectedNLS.includes(item.code);
+                      return (
+                        <div
+                          key={item.code}
+                          onClick={() => toggleNLS(item.code)}
+                          className={`p-3 rounded-xl border text-xs cursor-pointer transition flex items-start space-x-3 select-none ${
+                            isSelected
+                              ? "border-orange-500 bg-orange-50/70 text-orange-950 shadow-xs"
+                              : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
+                          }`}
+                        >
+                          <div className="mt-0.5 flex-shrink-0">
+                            {isSelected ? (
+                              <CheckSquare className="w-4 h-4 text-orange-600" />
+                            ) : (
+                              <Square className="w-4 h-4 text-slate-400" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <span className="font-mono font-bold px-1.5 py-0.5 bg-orange-100 text-orange-800 rounded text-[11px]">
+                                {item.code}
+                              </span>
+                              {isSelected && (
+                                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded">
+                                  Đã thêm vào khung
+                                </span>
+                              )}
+                            </div>
+                            <p className="leading-relaxed">{item.description}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Chân Modal */}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-200 mt-2">
+              {activeNLSDomain !== null ? (
+                <button
+                  type="button"
+                  onClick={() => setActiveNLSDomain(null)}
+                  className="inline-flex items-center space-x-1 text-xs font-semibold text-slate-600 hover:text-slate-900 px-3 py-2 rounded-lg hover:bg-slate-100 transition"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Quay lại các Miền</span>
+                </button>
+              ) : (
+                <div className="text-xs text-slate-500">
+                  Tổng cộng: <strong>52 mã chỉ báo</strong>
+                </div>
+              )}
+
               <button
                 type="button"
-                onClick={() => setShowNLSModal(false)}
-                className="px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-lg shadow-sm"
+                onClick={() => {
+                  setShowNLSModal(false);
+                  setActiveNLSDomain(null);
+                }}
+                className="px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl shadow-sm transition"
               >
-                Xác nhận ({selectedNLS.length} mã)
+                Xác nhận ({selectedNLS.length} mã đã chọn)
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL CHỌN MÃ CHỈ BÁO AI (32 mã) */}
+      {/* MODAL CHỌN MÃ CHỈ BÁO AI (SẮP XẾP THEO MẠCH NỘI DUNG) */}
       {showAIModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 max-h-[85vh] flex flex-col">
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col">
+            {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center space-x-2">
                 <Bot className="w-5 h-5 text-indigo-600" />
@@ -556,65 +698,201 @@ export default function HomePage() {
                   Chọn mã chỉ báo Trí tuệ nhân tạo AI Lớp 3 (PL CV 2422)
                 </h3>
               </div>
-              <span className="text-xs px-2.5 py-1 bg-indigo-100 text-indigo-800 font-bold rounded-full">
-                Đã chọn: {selectedAI.length} mã
-              </span>
-            </div>
-
-            <p className="text-xs text-slate-500 my-2">
-              Nhấn 1 lần để chọn, nhấn lần 2 để bỏ chọn. Sau khi chọn xong bấm nút <strong>&quot;Xác nhận&quot;</strong>.
-            </p>
-
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1 my-2">
-              {PRIMARY_AI_INDICATORS.map((item) => {
-                const isSelected = selectedAI.includes(item.code);
-                return (
-                  <div
-                    key={item.code}
-                    onClick={() => toggleAI(item.code)}
-                    className={`p-3 rounded-xl border text-xs cursor-pointer transition flex items-start space-x-3 select-none ${
-                      isSelected
-                        ? "border-indigo-500 bg-indigo-50/70 text-indigo-950 shadow-sm"
-                        : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
-                    }`}
-                  >
-                    <div className="mt-0.5 flex-shrink-0">
-                      {isSelected ? (
-                        <CheckSquare className="w-4 h-4 text-indigo-600" />
-                      ) : (
-                        <Square className="w-4 h-4 text-slate-400" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-0.5">
-                        <span className="font-mono font-bold px-1.5 py-0.5 bg-indigo-100 text-indigo-800 rounded text-[11px]">
-                          {item.code}
-                        </span>
-                        <span className="text-slate-500 text-[11px]">
-                          {item.strandName}
-                        </span>
-                      </div>
-                      <p className="leading-relaxed">{item.description}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="flex items-center justify-between pt-3 border-t border-slate-200">
               <button
                 type="button"
-                onClick={() => setSelectedAI([])}
-                className="text-xs text-red-600 hover:underline"
+                onClick={() => {
+                  setShowAIModal(false);
+                  setActiveAIStrand(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 p-1"
+                title="Đóng"
               >
-                Xóa tất cả lựa chọn
+                <X className="w-5 h-5" />
               </button>
+            </div>
+
+            {/* KHUNG THÔNG BÁO CÁC CHỈ BÁO AI ĐÃ CHỌN (LUÔN XUẤT HIỆN Ở TRÊN) */}
+            <div className="my-3 p-3 bg-indigo-50 border border-indigo-200 rounded-xl">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-bold text-indigo-950 flex items-center space-x-1.5">
+                  <span>📢 Khung thông báo: Đã chọn</span>
+                  <span className="px-2 py-0.5 bg-indigo-200 text-indigo-900 rounded-full font-extrabold text-[11px]">
+                    {selectedAI.length} mã AI
+                  </span>
+                </span>
+                {selectedAI.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAI([])}
+                    className="text-[11px] text-red-600 hover:underline font-medium"
+                  >
+                    Xóa tất cả
+                  </button>
+                )}
+              </div>
+              {selectedAI.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pt-1">
+                  {selectedAI.map((code) => (
+                    <span
+                      key={code}
+                      className="inline-flex items-center space-x-1 bg-white border border-indigo-300 text-indigo-900 px-2 py-0.5 rounded-lg text-xs font-mono font-bold shadow-xs"
+                    >
+                      <span>{code}</span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleAI(code);
+                        }}
+                        className="hover:text-red-600 ml-0.5 text-slate-400"
+                        title="Bỏ chọn mã này"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-indigo-800/80 italic">
+                  Chưa chọn mã nào. Hãy bấm vào một Mạch nội dung bên dưới để lựa chọn.
+                </p>
+              )}
+            </div>
+
+            {/* VÙNG CHỌN CHỈ BÁO (THEO MẠCH NỘI DUNG) */}
+            <div className="flex-1 overflow-y-auto pr-1 my-1">
+              {activeAIStrand === null ? (
+                /* CẤP 1: DANH SÁCH 4 MẠCH NỘI DUNG CHÍNH */
+                <div className="space-y-2">
+                  <p className="text-xs text-slate-500 font-medium mb-1">
+                    Bấm vào một <strong>Mạch nội dung</strong> bên dưới để xem và chọn mã chỉ báo:
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {AI_STRAND_GROUPS.map((strand) => {
+                      const countSelected = strand.indicators.filter((i) =>
+                        selectedAI.includes(i.code)
+                      ).length;
+                      return (
+                        <button
+                          key={strand.id}
+                          type="button"
+                          onClick={() => setActiveAIStrand(strand.id)}
+                          className="p-3.5 rounded-xl border border-slate-200 hover:border-indigo-500 bg-white hover:bg-indigo-50/30 text-left transition shadow-xs group flex flex-col justify-between"
+                        >
+                          <div>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="font-bold text-xs text-slate-900 group-hover:text-indigo-700">
+                                {strand.name}
+                              </span>
+                              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 transition group-hover:translate-x-0.5" />
+                            </div>
+                            <p className="text-[11px] text-slate-500 leading-relaxed mb-2 line-clamp-2">
+                              {strand.description}
+                            </p>
+                          </div>
+                          <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px]">
+                            <span className="text-slate-500 font-medium">
+                              {strand.indicators.length} chỉ báo
+                            </span>
+                            {countSelected > 0 && (
+                              <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 font-bold rounded-full">
+                                ✓ Đã chọn {countSelected}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                /* CẤP 2: DANH SÁCH CHỈ BÁO TRONG MẠCH ĐANG CHỌN */
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => setActiveAIStrand(null)}
+                      className="inline-flex items-center space-x-1.5 text-xs font-bold text-indigo-700 hover:text-indigo-900 bg-indigo-100/70 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg transition"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>Quay lại danh sách Mạch khác</span>
+                    </button>
+                    <span className="text-xs font-semibold text-slate-600 truncate max-w-[240px]">
+                      {AI_STRAND_GROUPS.find((s) => s.id === activeAIStrand)?.name}
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-slate-500">
+                    Nhấn 1 lần để chọn, nhấn lần 2 để bỏ chọn. Mã chọn sẽ hiện lên Khung thông báo ở trên.
+                  </p>
+
+                  <div className="space-y-2 pt-1">
+                    {AI_STRAND_GROUPS.find((s) => s.id === activeAIStrand)?.indicators.map((item) => {
+                      const isSelected = selectedAI.includes(item.code);
+                      return (
+                        <div
+                          key={item.code}
+                          onClick={() => toggleAI(item.code)}
+                          className={`p-3 rounded-xl border text-xs cursor-pointer transition flex items-start space-x-3 select-none ${
+                            isSelected
+                              ? "border-indigo-500 bg-indigo-50/70 text-indigo-950 shadow-xs"
+                              : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
+                          }`}
+                        >
+                          <div className="mt-0.5 flex-shrink-0">
+                            {isSelected ? (
+                              <CheckSquare className="w-4 h-4 text-indigo-600" />
+                            ) : (
+                              <Square className="w-4 h-4 text-slate-400" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <span className="font-mono font-bold px-1.5 py-0.5 bg-indigo-100 text-indigo-800 rounded text-[11px]">
+                                {item.code}
+                              </span>
+                              {isSelected && (
+                                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded">
+                                  Đã thêm vào khung
+                                </span>
+                              )}
+                            </div>
+                            <p className="leading-relaxed">{item.description}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Chân Modal */}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-200 mt-2">
+              {activeAIStrand !== null ? (
+                <button
+                  type="button"
+                  onClick={() => setActiveAIStrand(null)}
+                  className="inline-flex items-center space-x-1 text-xs font-semibold text-slate-600 hover:text-slate-900 px-3 py-2 rounded-lg hover:bg-slate-100 transition"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Quay lại các Mạch</span>
+                </button>
+              ) : (
+                <div className="text-xs text-slate-500">
+                  Tổng cộng: <strong>32 mã chỉ báo AI</strong>
+                </div>
+              )}
+
               <button
                 type="button"
-                onClick={() => setShowAIModal(false)}
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg shadow-sm"
+                onClick={() => {
+                  setShowAIModal(false);
+                  setActiveAIStrand(null);
+                }}
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-sm transition"
               >
-                Xác nhận ({selectedAI.length} mã)
+                Xác nhận ({selectedAI.length} mã đã chọn)
               </button>
             </div>
           </div>
@@ -816,7 +1094,10 @@ export default function HomePage() {
                   <div className="flex items-center space-x-2">
                     <button
                       type="button"
-                      onClick={() => setShowNLSModal(true)}
+                      onClick={() => {
+                        setActiveNLSDomain(null);
+                        setShowNLSModal(true);
+                      }}
                       className="flex-1 py-2 px-3 text-xs bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-lg text-orange-900 font-medium text-left flex items-center justify-between transition"
                     >
                       <span className="truncate">
@@ -856,7 +1137,10 @@ export default function HomePage() {
                   <div className="flex items-center space-x-2">
                     <button
                       type="button"
-                      onClick={() => setShowAIModal(true)}
+                      onClick={() => {
+                        setActiveAIStrand(null);
+                        setShowAIModal(true);
+                      }}
                       className="flex-1 py-2 px-3 text-xs bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg text-indigo-900 font-medium text-left flex items-center justify-between transition"
                     >
                       <span className="truncate">
