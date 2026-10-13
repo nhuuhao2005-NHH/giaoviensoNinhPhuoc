@@ -250,8 +250,8 @@ export default function HomePage() {
     e.preventDefault();
     setErrorMsg("");
 
-    if (!lessonTitle.trim()) {
-      setErrorMsg("Vui lòng nhập Tên bài dạy (hoặc tải file Kế hoạch bài dạy).");
+    if (!uploadedPlanContent.trim()) {
+      setErrorMsg("Vui lòng tải lên file Kế hoạch bài dạy (.docx hoặc .txt) cần tích hợp.");
       return;
     }
 
@@ -270,7 +270,7 @@ export default function HomePage() {
         body: JSON.stringify({
           subject,
           grade: "Lớp 3",
-          lessonTitle,
+          lessonTitle: lessonTitle || uploadedFileName.replace(/\.(docx|txt|md)$/i, ""),
           duration,
           learningObjectives,
           infrastructureLevel,
@@ -316,8 +316,13 @@ export default function HomePage() {
     if (!generatedPlan) return;
     setIsExporting(true);
     try {
+      let titleToExport = lessonTitle || uploadedFileName.replace(/\.(docx|txt|md)$/i, "");
+      if (!titleToExport) {
+        const match = generatedPlan.match(/BÀI(?:\s*\d*)?:\s*([^\n\r]+)/i);
+        titleToExport = match ? match[1].trim() : "Bai_day_Lop_3";
+      }
       await exportLessonToWord({
-        lessonTitle,
+        lessonTitle: titleToExport,
         subject,
         grade: "Lớp 3",
         content: generatedPlan,
@@ -917,26 +922,6 @@ export default function HomePage() {
           </p>
         </div>
 
-        {/* PRESET CHIPS */}
-        <div className="mb-6">
-          <div className="flex items-center space-x-2 mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            <Layers className="w-3.5 h-3.5 text-orange-600" />
-            <span>Chọn nhanh bài học mẫu Lớp 3:</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {GRADE3_PRESETS.map((p, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => handleApplyPreset(p)}
-                className="text-xs bg-white border border-slate-200 hover:border-orange-400 hover:bg-orange-50/50 text-slate-700 px-3 py-1.5 rounded-lg transition text-left shadow-sm"
-              >
-                <span className="font-semibold text-orange-600">{p.subject}:</span>{" "}
-                {p.lessonTitle}
-              </button>
-            ))}
-          </div>
-        </div>
 
         {/* GRID LAYOUT: INPUT FORM & OUTPUT/TABS */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -1019,20 +1004,6 @@ export default function HomePage() {
                 )}
               </div>
 
-              {/* Tên bài dạy */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Tên bài dạy <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ví dụ: Bài 15: Cơ quan tiêu hóa"
-                  value={lessonTitle}
-                  onChange={(e) => setLessonTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
 
               {/* 3. Đồ dùng & Thiết bị hiện có của lớp */}
               <div>
@@ -1178,21 +1149,6 @@ export default function HomePage() {
                 />
               </div>
 
-              {/* Yêu cầu cần đạt cốt lõi (nếu không tải file) */}
-              {!uploadedPlanContent && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Yêu cầu cần đạt cốt lõi (từ SGK)
-                  </label>
-                  <textarea
-                    rows={2}
-                    placeholder="Ghi yêu cầu cần đạt môn học (hoặc có thể để trống nếu đã có file tải lên)..."
-                    value={learningObjectives}
-                    onChange={(e) => setLearningObjectives(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  />
-                </div>
-              )}
 
               {/* 8. Nút màu cam nổi bật */}
               <button

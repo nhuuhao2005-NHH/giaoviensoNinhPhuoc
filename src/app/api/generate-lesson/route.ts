@@ -22,9 +22,9 @@ export async function POST(req: Request) {
       apiKey,
     } = body;
 
-    if (!subject || !lessonTitle) {
+    if (!subject || (!lessonTitle && !uploadedPlanContent)) {
       return NextResponse.json(
-        { error: "Vui lòng chọn Môn học và nhập Tên bài dạy." },
+        { error: "Vui lòng chọn Môn học và tải lên file Kế hoạch bài dạy cần tích hợp." },
         { status: 400 }
       );
     }
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
       apiKey,
       subject,
       grade,
-      lessonTitle,
+      lessonTitle: lessonTitle || "",
       duration,
       learningObjectives: learningObjectives || "Theo chuẩn kiến thức kĩ năng môn học",
       infrastructureLevel,

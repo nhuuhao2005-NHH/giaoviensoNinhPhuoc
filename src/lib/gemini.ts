@@ -68,7 +68,12 @@ export async function generateLessonWithGemini({
   const uploadedPlanNote = uploadedPlanContent
     ? `=== NỘI DUNG KẾ HOẠCH BÀI DẠY GỐC ĐƯỢC TẢI LÊN ===
 ${uploadedPlanContent}
-LƯU Ý: Giữ nguyên cốt lõi bài dạy của giáo viên, bổ sung/nâng cấp các mục tích hợp Năng lực số và AI theo đúng cấu trúc chuẩn bên dưới.`
+
+=== HƯỚNG DẪN XỬ LÝ NỘI DUNG TỪ BÀI DẠY GỐC ===
+1. TỰ ĐỘNG TRÍCH XUẤT CHÍNH XÁC TÊN BÀI DẠY từ nội dung bài gốc để ghi vào dòng: BÀI: [TÊN BÀI DẠY].
+2. GIỮ NGUYÊN TOÀN BỘ MỤC "1. Kiến thức" (chứa đầy đủ các Yêu cầu cần đạt của tiết học) từ Kế hoạch bài dạy gốc.
+3. Kế thừa các năng lực chung, năng lực đặc thù và phẩm chất từ bài gốc, bổ sung các dòng *Tích hợp Năng lực số và *Tích hợp Trí tuệ nhân tạo (AI).
+4. Giữ vững tiến trình các hoạt động của bài gốc nhưng cấu trúc lại thành 4 hoạt động chuẩn CV 2345 (chia rõ: Hoạt động của giáo viên | Hoạt động của học sinh) và lồng ghép học liệu số, công cụ AI theo các mã chỉ báo đã chọn.`
     : "";
 
   const prompt = `
@@ -78,7 +83,7 @@ Nhiệm vụ của bạn là soạn KẾ HOẠCH BÀI DẠY CẤP TIỂU HỌC c
 === CẤU TRÚC KẾ HOẠCH BÀI DẠY BẮT BUỘC (CHUẨN CV 2345) ===
 KẾ HOẠCH BÀI DẠY
 MÔN: ${subject.toUpperCase()} ; LỚP: ${grade.toUpperCase()}
-BÀI: ${lessonTitle.toUpperCase()}
+BÀI: ${lessonTitle ? lessonTitle.toUpperCase() : "[TRÍCH XUẤT TỪ KẾ HOẠCH BÀI DẠY GỐC]"}
 Ngày soạn: .../.../...
 
 I. YÊU CẦU CẦN ĐẠT:
