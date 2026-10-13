@@ -77,7 +77,7 @@ export async function POST(req: Request) {
     // Nối trực tiếp vào pipeline.js trong thư mục khbd-renderer
     const { processKhbd } = require("../../../../khbd-renderer/pipeline");
 
-    const docxBuffer = await processKhbd(fileObj, { mon, tiet, codes });
+    const docxBuffer = await processKhbd(fileObj, { mon, tiet, codes, apiKey });
 
     return new NextResponse(docxBuffer, {
       status: 200,
