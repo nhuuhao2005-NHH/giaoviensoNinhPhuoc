@@ -33,10 +33,14 @@ import {
 import saveAs from "file-saver";
 
 
+interface PreviewStep {
+  gv: string;
+  hs: string;
+}
+
 interface PreviewActivity {
   title: string;
-  teacherLines: string[];
-  studentLines: string[];
+  steps: PreviewStep[];
 }
 
 function parsePlanForPreview(rawPlan: string) {
@@ -47,7 +51,7 @@ function parsePlanForPreview(rawPlan: string) {
   let inIII = false;
   let inIV = false;
   let currentAct: PreviewActivity | null = null;
-  let col: "teacher" | "student" = "teacher";
+  let lastRole: "gv" | "hs" | null = null;
 
   for (const rawLine of lines) {
     const line = rawLine.trim();
@@ -76,31 +80,48 @@ function parsePlanForPreview(rawPlan: string) {
     }
 
     if (inIII) {
+      // Bỏ qua dòng tiêu đề bảng nếu có
+      if (/^Hoạt động của (?:giáo viên|học sinh)/i.test(line)) {
+        continue;
+      }
+
+      // Phát hiện tiêu đề hoạt động: 1. Khởi động..., 2. Khám phá...
       if (/^(?:[1-4]\.|\d+\.)\s*(?:Khởi động|Khám phá|Luyện tập|Vận dụng)/i.test(line)) {
         if (currentAct) activities.push(currentAct);
-        currentAct = { title: line, teacherLines: [], studentLines: [] };
-        col = "teacher";
+        currentAct = { title: line, steps: [] };
+        lastRole = null;
         continue;
       }
-      if (
-        line.startsWith("- Hoạt động của giáo viên:") ||
-        line.startsWith("Hoạt động của giáo viên:") ||
-        line.startsWith("+ Hoạt động của giáo viên:")
-      ) {
-        col = "teacher";
-        continue;
-      }
-      if (
-        line.startsWith("- Hoạt động của học sinh:") ||
-        line.startsWith("Hoạt động của học sinh:") ||
-        line.startsWith("+ Hoạt động của học sinh:")
-      ) {
-        col = "student";
-        continue;
-      }
+
       if (currentAct) {
-        if (col === "teacher") currentAct.teacherLines.push(line);
-        else currentAct.studentLines.push(line);
+        const isGV =
+          /^(?:[-+•]\s*)?GV\b/i.test(line) ||
+          /^[-+•]?\s*Hoạt động của giáo viên/i.test(line);
+        const isHS =
+          /^(?:[-+•]\s*)?HS\b/i.test(line) ||
+          /^[-+•]?\s*Hoạt động của học sinh/i.test(line);
+
+        if (isGV) {
+          currentAct.steps.push({ gv: line, hs: "" });
+          lastRole = "gv";
+        } else if (isHS) {
+          if (
+            currentAct.steps.length > 0 &&
+            !currentAct.steps[currentAct.steps.length - 1].hs
+          ) {
+            currentAct.steps[currentAct.steps.length - 1].hs = line;
+          } else {
+            currentAct.steps.push({ gv: "", hs: line });
+          }
+          lastRole = "hs";
+        } else if (currentAct.steps.length > 0) {
+          const lastStep = currentAct.steps[currentAct.steps.length - 1];
+          if (lastRole === "hs" && lastStep.hs) {
+            lastStep.hs += "\n" + line;
+          } else {
+            lastStep.gv += "\n" + line;
+          }
+        }
       }
       continue;
     }
@@ -1480,7 +1501,7 @@ export default function HomePage() {
                               <h3 className="font-bold text-sm text-slate-900 mb-2">
                                 III. CÁC HOẠT ĐỘNG DẠY HỌC CHỦ YẾU:
                               </h3>
-                              <div className="overflow-x-auto border border-slate-300 rounded-lg">
+                              <div className="overflow-x-auto border border-slate-300 rounded-lg shadow-xs">
                                 <table className="w-full border-collapse text-xs">
                                   <thead>
                                     <tr className="bg-slate-100 border-b border-slate-300 text-slate-900">
@@ -1492,36 +1513,37 @@ export default function HomePage() {
                                       </th>
                                     </tr>
                                   </thead>
-                                  <tbody className="divide-y divide-slate-300">
+                                  <tbody>
                                     {parsedPreview.activities.map((act, aIdx) => (
-                                      <tr key={aIdx} className="align-top">
-                                        <td className="p-3 border-r border-slate-300 bg-white space-y-1.5">
-                                          <div className="font-bold text-slate-900 pb-1 border-b border-slate-100 text-xs">
+                                      <React.Fragment key={aIdx}>
+                                        {/* Tiêu đề hoạt động - trải dài 2 cột, viền trên dưới chuẩn */}
+                                        <tr className="bg-orange-50/80 border-t border-b border-slate-300">
+                                          <td
+                                            colSpan={2}
+                                            className="p-2.5 font-bold text-orange-950 text-xs tracking-wide"
+                                          >
                                             {act.title}
-                                          </div>
-                                          {act.teacherLines.map((tl, tIdx) => (
-                                            <p
-                                              key={tIdx}
-                                              className="text-slate-800 leading-relaxed text-xs"
-                                            >
-                                              {tl}
-                                            </p>
-                                          ))}
-                                        </td>
-                                        <td className="p-3 bg-white space-y-1.5">
-                                          <div className="text-transparent select-none pb-1 border-b border-transparent text-xs">
-                                            &nbsp;
-                                          </div>
-                                          {act.studentLines.map((sl, sIdx) => (
-                                            <p
-                                              key={sIdx}
-                                              className="text-slate-800 leading-relaxed text-xs"
-                                            >
-                                              {sl}
-                                            </p>
-                                          ))}
-                                        </td>
-                                      </tr>
+                                          </td>
+                                        </tr>
+                                        {/* Các bước song hành: GV (trái) | HS (phải) */}
+                                        {act.steps.map((st, sIdx) => (
+                                          <tr
+                                            key={sIdx}
+                                            className="align-top border-b border-slate-200 hover:bg-slate-50/50 transition"
+                                          >
+                                            <td className="w-1/2 p-3 border-r border-slate-300 bg-white">
+                                              <p className="text-slate-800 leading-relaxed text-xs whitespace-pre-line">
+                                                {st.gv || "—"}
+                                              </p>
+                                            </td>
+                                            <td className="w-1/2 p-3 bg-white">
+                                              <p className="text-slate-800 leading-relaxed text-xs whitespace-pre-line">
+                                                {st.hs || "—"}
+                                              </p>
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </React.Fragment>
                                     ))}
                                   </tbody>
                                 </table>

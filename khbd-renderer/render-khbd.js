@@ -144,7 +144,6 @@ function buildDoc(d0, opts = {}) {
       cell([center(t, { bold: true })], { verticalAlign: VerticalAlign.CENTER })
     ),
   });
-  const NONE = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
   const rows = [];
   hds.forEach((h, i) => {
     const ten = clean(h.ten).replace(/^\d+[.)]\s*/, "");
@@ -152,21 +151,31 @@ function buildDoc(d0, opts = {}) {
       cantSplit: true,
       children: [new TableCell({
         columnSpan: 2, width: { size: COL_W * 2, type: WidthType.DXA },
-        borders: { top: B, left: B, right: B, bottom: NONE },
-        margins: { top: 60, bottom: 20, left: 100, right: 100 },
+        borders: BORDERS,
+        margins: { top: 60, bottom: 60, left: 100, right: 100 },
         children: [para([run(`${i + 1}. ${ten}: ${thoiGian(h, ten)}`, { bold: true })])],
       })],
     }));
     steps(h).forEach((st) => {
       rows.push(new TableRow({
         cantSplit: true,
-        children: [st.gv, st.hs].map((t) => cell([bullet(t)], { borders: { top: NONE, bottom: NONE, left: B, right: B } })),
+        children: [st.gv, st.hs].map((t) => cell([bullet(t)], { borders: BORDERS })),
       }));
     });
   });
-  body.push(new Table({ width: { size: COL_W * 2, type: WidthType.DXA }, columnWidths: [COL_W, COL_W], rows: [head, ...rows] }));
-  // đường kẻ đóng đáy bảng
-  body.push(new Paragraph({ spacing: { before: 0, after: 0 }, border: { top: B }, children: [] }));
+  body.push(new Table({
+    width: { size: COL_W * 2, type: WidthType.DXA },
+    columnWidths: [COL_W, COL_W],
+    borders: {
+      top: B,
+      bottom: B,
+      left: B,
+      right: B,
+      insideH: B,
+      insideV: B,
+    },
+    rows: [head, ...rows],
+  }));
 
   // mỗi dòng chấm vừa khít một dòng, kéo hết lề phải (tab có dẫn chấm)
   const dotLine = () => para([run("\t")], { tabStops: [{ type: TabStopType.RIGHT, position: CONTENT_W, leader: LeaderType.DOT }] });
