@@ -1526,64 +1526,70 @@ export default function HomePage() {
                                     </tr>
                                   </thead>
                                   <tbody>
-                                    <tr className="align-top">
-                                      {/* Cột GV: tất cả tiêu đề hoạt động và các bước GV */}
+                                    <tr className="align-top font-serif">
+                                      {/* Cột GV: tiêu đề hoạt động và các bước GV (Spacing trước sau = 0, Enter xuống dòng canh hàng) */}
                                       <td className="w-1/2 p-3 border-r border-slate-300 bg-white align-top">
-                                        {parsedPreview.activities.map((act, aIdx) => (
-                                          <div key={aIdx} className="mb-4 last:mb-0">
-                                            <p className="font-bold text-slate-900 mb-2 text-xs">
-                                              {act.title}
-                                            </p>
-                                            <div className="space-y-2">
+                                        {parsedPreview.activities.map((act, aIdx) => {
+                                          return (
+                                            <div key={aIdx}>
+                                              {/* Enter giữa các hoạt động */}
+                                              {aIdx > 0 && <p className="leading-relaxed text-xs m-0 p-0 select-none">&nbsp;</p>}
+                                              <p className="font-bold text-slate-900 leading-relaxed text-xs m-0 p-0">
+                                                {act.title}
+                                              </p>
                                               {act.steps.map((st, sIdx) => {
-                                                const gvLen = (st.gv || "").length;
-                                                const hsLen = (st.hs || "").length;
-                                                const gvLines = Math.max(1, Math.ceil((gvLen + 2) / 45));
-                                                const hsLines = Math.max(1, Math.ceil((hsLen + 2) / 45));
-                                                const extraPadding = hsLines > gvLines ? (hsLines - gvLines) * 18 : 0;
+                                                const gvLen = (st.gv || "").length + 2;
+                                                const hsLen = (st.hs || "").length + 2;
+                                                const gvLines = Math.max(1, Math.ceil(gvLen / 41));
+                                                const hsLines = Math.max(1, Math.ceil(hsLen / 41));
+                                                const gvExtra = hsLines > gvLines ? hsLines - gvLines : 0;
                                                 return (
-                                                  <div
-                                                    key={sIdx}
-                                                    style={{ paddingBottom: `${extraPadding}px` }}
-                                                  >
-                                                    <p className="text-slate-800 leading-relaxed text-xs whitespace-pre-line">
+                                                  <React.Fragment key={sIdx}>
+                                                    <p className="text-slate-800 leading-relaxed text-xs whitespace-pre-line m-0 p-0 text-justify">
                                                       {ensureDash(st.gv)}
                                                     </p>
-                                                  </div>
+                                                    {Array.from({ length: gvExtra }).map((_, i) => (
+                                                      <p key={i} className="leading-relaxed text-xs m-0 p-0 select-none">&nbsp;</p>
+                                                    ))}
+                                                  </React.Fragment>
                                                 );
                                               })}
                                             </div>
-                                          </div>
-                                        ))}
+                                          );
+                                        })}
                                       </td>
-                                      {/* Cột HS: các bước HS song hành bằng khoảng trống xuống dòng */}
+                                      {/* Cột HS: các bước HS song hành bằng phím xuống dòng (Enter) */}
                                       <td className="w-1/2 p-3 bg-white align-top">
-                                        {parsedPreview.activities.map((act, aIdx) => (
-                                          <div key={aIdx} className="mb-4 last:mb-0">
-                                            <p className="font-bold opacity-0 select-none mb-2 text-xs" aria-hidden="true">
-                                              {act.title}
-                                            </p>
-                                            <div className="space-y-2">
+                                        {parsedPreview.activities.map((act, aIdx) => {
+                                          const titleLines = Math.max(1, Math.ceil(act.title.length / 41));
+                                          return (
+                                            <div key={aIdx}>
+                                              {/* Enter giữa các hoạt động */}
+                                              {aIdx > 0 && <p className="leading-relaxed text-xs m-0 p-0 select-none">&nbsp;</p>}
+                                              {/* Phím xuống dòng (Enter) tương ứng với tiêu đề GV */}
+                                              {Array.from({ length: titleLines }).map((_, i) => (
+                                                <p key={i} className="leading-relaxed text-xs m-0 p-0 select-none">&nbsp;</p>
+                                              ))}
                                               {act.steps.map((st, sIdx) => {
-                                                const gvLen = (st.gv || "").length;
-                                                const hsLen = (st.hs || "").length;
-                                                const gvLines = Math.max(1, Math.ceil((gvLen + 2) / 45));
-                                                const hsLines = Math.max(1, Math.ceil((hsLen + 2) / 45));
-                                                const extraPadding = gvLines > hsLines ? (gvLines - hsLines) * 18 : 0;
+                                                const gvLen = (st.gv || "").length + 2;
+                                                const hsLen = (st.hs || "").length + 2;
+                                                const gvLines = Math.max(1, Math.ceil(gvLen / 41));
+                                                const hsLines = Math.max(1, Math.ceil(hsLen / 41));
+                                                const hsExtra = gvLines > hsLines ? gvLines - hsLines : 0;
                                                 return (
-                                                  <div
-                                                    key={sIdx}
-                                                    style={{ paddingBottom: `${extraPadding}px` }}
-                                                  >
-                                                    <p className="text-slate-800 leading-relaxed text-xs whitespace-pre-line">
+                                                  <React.Fragment key={sIdx}>
+                                                    <p className="text-slate-800 leading-relaxed text-xs whitespace-pre-line m-0 p-0 text-justify">
                                                       {ensureDash(st.hs)}
                                                     </p>
-                                                  </div>
+                                                    {Array.from({ length: hsExtra }).map((_, i) => (
+                                                      <p key={i} className="leading-relaxed text-xs m-0 p-0 select-none">&nbsp;</p>
+                                                    ))}
+                                                  </React.Fragment>
                                                 );
                                               })}
                                             </div>
-                                          </div>
-                                        ))}
+                                          );
+                                        })}
                                       </td>
                                     </tr>
                                   </tbody>

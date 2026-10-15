@@ -62,24 +62,45 @@ function steps(h) {
     .filter((x) => x.gv || x.hs);
 }
 
-// ---- Các khối dựng sẵn
+// ---- Các khối dựng sẵn (Spacing Paragraph trước và sau cố định là 0)
 const run = (text, o = {}) => new TextRun({ text, font: FONT, size: SIZE, ...o });
 const para = (children, o = {}) =>
-  new Paragraph({ spacing: { line: 276, after: 0 }, children, ...o });
+  new Paragraph({ spacing: { line: 276, before: 0, after: 0 }, children, ...o });
 const center = (text, o = {}) =>
   para([run(text, o)], { alignment: AlignmentType.CENTER });
-const heading = (text) => para([run(text, { bold: true })], { spacing: { line: 276, before: 120, after: 0 } });
+const heading = (text) => para([run(text, { bold: true })], { spacing: { line: 276, before: 0, after: 0 } });
 const dashLine = (text, o = {}) => {
   const t = clean(text);
   if (!t) return null;
   return new Paragraph({
-    spacing: { line: 276, after: 60 },
+    spacing: { line: 276, before: 0, after: 0 },
     alignment: AlignmentType.JUSTIFIED,
     children: [run(`- ${t}`)],
     ...o,
   });
 };
-const empty = () => para([run("")]);
+const empty = () =>
+  new Paragraph({
+    spacing: { line: 276, before: 0, after: 0 },
+    children: [run("")],
+  });
+
+function countLines(text) {
+  const str = String(text ?? "").trim();
+  if (!str) return 1;
+  const lines = str.split("\n");
+  let total = 0;
+  for (const line of lines) {
+    const l = line.trim();
+    if (!l) {
+      total += 1;
+    } else {
+      const effectiveLen = l.startsWith("-") ? l.length : l.length + 2;
+      total += Math.max(1, Math.ceil(effectiveLen / 41));
+    }
+  }
+  return Math.max(1, total);
+}
 
 function normalizeActivityName(raw) {
   let name = clean(raw).replace(/^\d+[.)]\s*/, "");
@@ -153,50 +174,60 @@ function buildDoc(d0, opts = {}) {
 
   // Bảng 2 cột chuẩn KHBD_MAU.docx: gồm đúng 2 hàng
   // Hàng 1: Tiêu đề cột GV | HS
-  // Hàng 2: Toàn bộ hoạt động GV và HS song hành bằng khoảng trống xuống dòng (spacing.after)
+  // Hàng 2: Toàn bộ hoạt động GV và HS song hành bằng phím xuống dòng (Enter / empty paragraph)
+  // Spacing Paragraph trước và sau giữ cố định là 0
   const gvChildren = [];
   const hsChildren = [];
 
   hds.forEach((h, hIdx) => {
     const ten = normalizeActivityName(h.ten);
     const tg = thoiGian(h, ten);
+    const titleText = `${hIdx + 1}. ${ten}: ${tg}`;
+    const titleLines = countLines(titleText);
 
-    // Tiêu đề hoạt động GV (In đậm)
+    // Cách 1 dòng trống (Enter) giữa các hoạt động
+    if (hIdx > 0) {
+      gvChildren.push(empty());
+      hsChildren.push(empty());
+    }
+
+    // Tiêu đề hoạt động GV (In đậm, spacing trước/sau = 0)
     gvChildren.push(
       new Paragraph({
-        spacing: { line: 276, before: hIdx > 0 ? 140 : 40, after: 60 },
-        children: [run(`${hIdx + 1}. ${ten}: ${tg}`, { bold: true })],
+        spacing: { line: 276, before: 0, after: 0 },
+        children: [run(titleText, { bold: true })],
       })
     );
 
-    // Dòng giữ chỗ tương ứng bên HS để các bước bên dưới song hành
-    hsChildren.push(
-      new Paragraph({
-        spacing: { line: 276, before: hIdx > 0 ? 140 : 40, after: 60 },
-        children: [run("")],
-      })
-    );
+    // Dùng phím xuống dòng (Enter) tương ứng bên HS để các bước bên dưới song hành ngang hàng
+    for (let k = 0; k < titleLines; k++) {
+      hsChildren.push(empty());
+    }
 
     // Từng bước song hành giữa GV và HS
     steps(h).forEach((st) => {
       const gvText = clean(st.gv);
       const hsText = clean(st.hs);
 
-      // Ước lượng số dòng chữ (khoảng 42 ký tự/dòng ở font 14pt cột rộng 4678 dxa)
-      const gvLines = Math.max(1, Math.ceil((gvText.length + 2) / 42));
-      const hsLines = Math.max(1, Math.ceil((hsText.length + 2) / 42));
+      const gvLines = countLines(gvText);
+      const hsLines = countLines(hsText);
 
-      let gvAfter = 60;
-      let hsAfter = 60;
+      // Thêm dòng gạch đầu dòng của GV và HS (spacing trước/sau = 0)
+      gvChildren.push(dashLine(gvText));
+      hsChildren.push(dashLine(hsText));
 
+      // Dùng phím xuống dòng (Enter) để điều chỉnh các hoạt động tiếp theo ngang hàng nhau
       if (gvLines > hsLines) {
-        hsAfter += (gvLines - hsLines) * 276;
+        const diff = gvLines - hsLines;
+        for (let k = 0; k < diff; k++) {
+          hsChildren.push(empty());
+        }
       } else if (hsLines > gvLines) {
-        gvAfter += (hsLines - gvLines) * 276;
+        const diff = hsLines - gvLines;
+        for (let k = 0; k < diff; k++) {
+          gvChildren.push(empty());
+        }
       }
-
-      gvChildren.push(dashLine(gvText, { spacing: { line: 276, after: gvAfter } }));
-      hsChildren.push(dashLine(hsText, { spacing: { line: 276, after: hsAfter } }));
     });
   });
 
