@@ -16,6 +16,9 @@ function validateKhbd(raw, selectedCodes = [], selectedAiCodes = []) {
   d.hoat_dong = (d.hoat_dong || []).filter((h) => (h.cac_buoc || []).some((s) => clean(s.gv) || clean(s.hs)));
   if (!d.hoat_dong.length) errors.push("Thiếu hoat_dong / cac_buoc.");
   d.hoat_dong.forEach((h) => {
+    h.ten = clean(h.ten)
+      .replace(/Luyện\s*tập\s*thực\s*hành/gi, "Luyện tập, thực hành")
+      .replace(/Vận\s*dụng\s*trải\s*nghiệm/gi, "Vận dụng, trải nghiệm");
     h.cac_buoc = h.cac_buoc.filter((s) => clean(s.gv) || clean(s.hs));
     h.cac_buoc.forEach((s, i) => {
       if (!clean(s.gv) || !clean(s.hs))

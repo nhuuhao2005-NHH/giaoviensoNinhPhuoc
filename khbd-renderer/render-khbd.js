@@ -2,7 +2,7 @@
 // Cài: npm i docx
 const {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-  AlignmentType, WidthType, BorderStyle, LevelFormat, VerticalAlign, TabStopType, LeaderType,
+  AlignmentType, WidthType, BorderStyle, VerticalAlign, TabStopType, LeaderType,
 } = require("docx");
 
 // ---- Thông số lấy từ KHBD_MAU.docx: A4, Times New Roman 14pt, lề T/B 2cm, trái 3cm, phải 1.5cm
@@ -69,14 +69,26 @@ const para = (children, o = {}) =>
 const center = (text, o = {}) =>
   para([run(text, o)], { alignment: AlignmentType.CENTER });
 const heading = (text) => para([run(text, { bold: true })], { spacing: { line: 276, before: 120, after: 0 } });
-const bullet = (text) =>
-  new Paragraph({
-    numbering: { reference: "dash", level: 0 },
-    spacing: { line: 276, after: 0 },
+const dashLine = (text, o = {}) => {
+  const t = clean(text);
+  if (!t) return null;
+  return new Paragraph({
+    spacing: { line: 276, after: 60 },
     alignment: AlignmentType.JUSTIFIED,
-    children: [run(text)],
+    children: [run(`- ${t}`)],
+    ...o,
   });
+};
 const empty = () => para([run("")]);
+
+function normalizeActivityName(raw) {
+  let name = clean(raw).replace(/^\d+[.)]\s*/, "");
+  name = name.replace(/Luyện\s*tập\s*thực\s*hành/gi, "Luyện tập, thực hành");
+  name = name.replace(/Vận\s*dụng\s*trải\s*nghiệm/gi, "Vận dụng, trải nghiệm");
+  name = name.replace(/Luyện\s*tập\s*[\-–/]\s*thực\s*hành/gi, "Luyện tập, thực hành");
+  name = name.replace(/Vận\s*dụng\s*[\-–/]\s*trải\s*nghiệm/gi, "Vận dụng, trải nghiệm");
+  return name;
+}
 
 const B = { style: BorderStyle.SINGLE, size: 6, color: "000000" };
 const BORDERS = { top: B, bottom: B, left: B, right: B };
@@ -93,11 +105,12 @@ const cell = (children, o = {}) =>
 const bareCode = (m) => clean(m).replace(/[\[\]()]/g, "").replace(/^Mã\s*/i, "").trim();
 
 function codeList(items) {
-  // [{ma, noi_dung}] -> "4.1.CB1a: nội dung"
+  // [{ma, noi_dung}] -> "- 4.1.CB1a: nội dung"
   return (items || [])
     .map((x) => ({ ma: bareCode(x.ma), nd: clean(x.noi_dung) }))
     .filter((x) => x.ma || x.nd)
-    .map((x) => bullet(x.ma ? `${x.ma}: ${x.nd}` : x.nd));
+    .map((x) => dashLine(x.ma ? `${x.ma}: ${x.nd}` : x.nd))
+    .filter(Boolean);
 }
 
 // Mã nằm trong lời văn của hoạt động: "[Mã 4.1.CB1a]" -> "(4.1.CB1a)"
@@ -122,7 +135,7 @@ function buildDoc(d0, opts = {}) {
 
     heading("I. YÊU CẦU CẦN ĐẠT"),
     para([run("1. Kiến thức:", { bold: true })]),
-    ...(kt.length ? kt.map(bullet) : [bullet("…")]),
+    ...(kt.length ? kt.map((t) => dashLine(t)).filter(Boolean) : [dashLine("…")]),
     para([run("2. Năng lực: ", { bold: true }), run("Năng lực tự chủ, tự học; năng lực giải quyết vấn đề và sáng tạo; năng lực giao tiếp và hợp tác.")], { alignment: AlignmentType.JUSTIFIED }),
     para([run("3. Phẩm chất: ", { bold: true }), run("Phẩm chất yêu nước, nhân ái, chăm chỉ, trách nhiệm.")]),
   ];
@@ -133,49 +146,111 @@ function buildDoc(d0, opts = {}) {
 
   body.push(
     heading("II. ĐỒ DÙNG DẠY HỌC:"),
-    bullet(`Giáo viên: ${clean(d.do_dung_gv)}`),
-    bullet(`Học sinh: ${clean(d.do_dung_hs)}`),
+    dashLine(`Giáo viên: ${clean(d.do_dung_gv)}`),
+    dashLine(`Học sinh: ${clean(d.do_dung_hs)}`),
     heading("III. CÁC HOẠT ĐỘNG DẠY HỌC CHỦ YẾU:")
   );
 
-  // Bảng 2 cột: mỗi hoạt động = 1 dòng tiêu đề + các dòng "bước"; mỗi bước có GV (trái) và HS (phải) cùng hàng
-  const head = new TableRow({
-    children: ["Hoạt động của giáo viên", "Hoạt động của học sinh"].map((t) =>
-      cell([center(t, { bold: true })], { verticalAlign: VerticalAlign.CENTER })
-    ),
-  });
-  const rows = [];
-  hds.forEach((h, i) => {
-    const ten = clean(h.ten).replace(/^\d+[.)]\s*/, "");
-    rows.push(new TableRow({
-      cantSplit: true,
-      children: [new TableCell({
-        columnSpan: 2, width: { size: COL_W * 2, type: WidthType.DXA },
-        borders: BORDERS,
-        margins: { top: 60, bottom: 60, left: 100, right: 100 },
-        children: [para([run(`${i + 1}. ${ten}: ${thoiGian(h, ten)}`, { bold: true })])],
-      })],
-    }));
+  // Bảng 2 cột chuẩn KHBD_MAU.docx: gồm đúng 2 hàng
+  // Hàng 1: Tiêu đề cột GV | HS
+  // Hàng 2: Toàn bộ hoạt động GV và HS song hành bằng khoảng trống xuống dòng (spacing.after)
+  const gvChildren = [];
+  const hsChildren = [];
+
+  hds.forEach((h, hIdx) => {
+    const ten = normalizeActivityName(h.ten);
+    const tg = thoiGian(h, ten);
+
+    // Tiêu đề hoạt động GV (In đậm)
+    gvChildren.push(
+      new Paragraph({
+        spacing: { line: 276, before: hIdx > 0 ? 140 : 40, after: 60 },
+        children: [run(`${hIdx + 1}. ${ten}: ${tg}`, { bold: true })],
+      })
+    );
+
+    // Dòng giữ chỗ tương ứng bên HS để các bước bên dưới song hành
+    hsChildren.push(
+      new Paragraph({
+        spacing: { line: 276, before: hIdx > 0 ? 140 : 40, after: 60 },
+        children: [run("")],
+      })
+    );
+
+    // Từng bước song hành giữa GV và HS
     steps(h).forEach((st) => {
-      rows.push(new TableRow({
-        cantSplit: true,
-        children: [st.gv, st.hs].map((t) => cell([bullet(t)], { borders: BORDERS })),
-      }));
+      const gvText = clean(st.gv);
+      const hsText = clean(st.hs);
+
+      // Ước lượng số dòng chữ (khoảng 42 ký tự/dòng ở font 14pt cột rộng 4678 dxa)
+      const gvLines = Math.max(1, Math.ceil((gvText.length + 2) / 42));
+      const hsLines = Math.max(1, Math.ceil((hsText.length + 2) / 42));
+
+      let gvAfter = 60;
+      let hsAfter = 60;
+
+      if (gvLines > hsLines) {
+        hsAfter += (gvLines - hsLines) * 276;
+      } else if (hsLines > gvLines) {
+        gvAfter += (hsLines - gvLines) * 276;
+      }
+
+      gvChildren.push(dashLine(gvText, { spacing: { line: 276, after: gvAfter } }));
+      hsChildren.push(dashLine(hsText, { spacing: { line: 276, after: hsAfter } }));
     });
   });
-  body.push(new Table({
-    width: { size: COL_W * 2, type: WidthType.DXA },
-    columnWidths: [COL_W, COL_W],
-    borders: {
-      top: B,
-      bottom: B,
-      left: B,
-      right: B,
-      insideH: B,
-      insideV: B,
-    },
-    rows: [head, ...rows],
-  }));
+
+  const head = new TableRow({
+    children: [
+      new TableCell({
+        width: { size: COL_W, type: WidthType.DXA },
+        borders: { top: B, bottom: B, left: B, right: B },
+        margins: { top: 100, bottom: 100, left: 100, right: 100 },
+        children: [center("Hoạt động của giáo viên", { bold: true })],
+        verticalAlign: VerticalAlign.CENTER,
+      }),
+      new TableCell({
+        width: { size: COL_W, type: WidthType.DXA },
+        borders: { top: B, bottom: B, left: B, right: B },
+        margins: { top: 100, bottom: 100, left: 100, right: 100 },
+        children: [center("Hoạt động của học sinh", { bold: true })],
+        verticalAlign: VerticalAlign.CENTER,
+      }),
+    ],
+  });
+
+  const contentRow = new TableRow({
+    children: [
+      new TableCell({
+        width: { size: COL_W, type: WidthType.DXA },
+        borders: { top: B, bottom: B, left: B, right: B },
+        margins: { top: 80, bottom: 80, left: 100, right: 100 },
+        children: gvChildren.filter(Boolean),
+      }),
+      new TableCell({
+        width: { size: COL_W, type: WidthType.DXA },
+        borders: { top: B, bottom: B, left: B, right: B },
+        margins: { top: 80, bottom: 80, left: 100, right: 100 },
+        children: hsChildren.filter(Boolean),
+      }),
+    ],
+  });
+
+  body.push(
+    new Table({
+      width: { size: COL_W * 2, type: WidthType.DXA },
+      columnWidths: [COL_W, COL_W],
+      borders: {
+        top: B,
+        bottom: B,
+        left: B,
+        right: B,
+        insideH: B,
+        insideV: B,
+      },
+      rows: [head, contentRow],
+    })
+  );
 
   // mỗi dòng chấm vừa khít một dòng, kéo hết lề phải (tab có dẫn chấm)
   const dotLine = () => para([run("\t")], { tabStops: [{ type: TabStopType.RIGHT, position: CONTENT_W, leader: LeaderType.DOT }] });
@@ -187,13 +262,6 @@ function buildDoc(d0, opts = {}) {
 
   return new Document({
     styles: { default: { document: { run: { font: FONT, size: SIZE } } } },
-    numbering: {
-      config: [{
-        reference: "dash",
-        levels: [{ level: 0, format: LevelFormat.BULLET, text: "-", alignment: AlignmentType.LEFT,
-          style: { paragraph: { indent: { left: 284, hanging: 284 } } } }],
-      }],
-    },
     sections: [{ properties: { page: PAGE }, children: body }],
   });
 }

@@ -43,6 +43,13 @@ interface PreviewActivity {
   steps: PreviewStep[];
 }
 
+function ensureDash(text: string): string {
+  const t = (text || "").trim();
+  if (!t) return "";
+  if (t.startsWith("-")) return t;
+  return `- ${t}`;
+}
+
 function parsePlanForPreview(rawPlan: string) {
   const lines = rawPlan.split("\n");
   const beforeSectionIII: string[] = [];
@@ -51,7 +58,7 @@ function parsePlanForPreview(rawPlan: string) {
   let inIII = false;
   let inIV = false;
   let currentAct: PreviewActivity | null = null;
-  let lastRole: "gv" | "hs" | null = null;
+  const hsQueue: string[] = [];
 
   for (const rawLine of lines) {
     const line = rawLine.trim();
@@ -88,39 +95,32 @@ function parsePlanForPreview(rawPlan: string) {
       // Phát hiện tiêu đề hoạt động: 1. Khởi động..., 2. Khám phá...
       if (/^(?:[1-4]\.|\d+\.)\s*(?:Khởi động|Khám phá|Luyện tập|Vận dụng)/i.test(line)) {
         if (currentAct) activities.push(currentAct);
-        currentAct = { title: line, steps: [] };
-        lastRole = null;
+        const normalizedTitle = line
+          .replace(/Luyện\s*tập\s*thực\s*hành/gi, "Luyện tập, thực hành")
+          .replace(/Vận\s*dụng\s*trải\s*nghiệm/gi, "Vận dụng, trải nghiệm");
+        currentAct = { title: normalizedTitle, steps: [] };
         continue;
       }
 
-      if (currentAct) {
-        const isGV =
-          /^(?:[-+•]\s*)?GV\b/i.test(line) ||
-          /^[-+•]?\s*Hoạt động của giáo viên/i.test(line);
-        const isHS =
-          /^(?:[-+•]\s*)?HS\b/i.test(line) ||
-          /^[-+•]?\s*Hoạt động của học sinh/i.test(line);
+      const isGV =
+        /^(?:[-+•]\s*)?GV\b/i.test(line) ||
+        /^[-+•]?\s*Hoạt động của giáo viên/i.test(line);
+      const isHS =
+        /^(?:[-+•]\s*)?HS\b/i.test(line) ||
+        /^[-+•]?\s*Hoạt động của học sinh/i.test(line);
 
-        if (isGV) {
+      if (isGV) {
+        if (currentAct) {
           currentAct.steps.push({ gv: line, hs: "" });
-          lastRole = "gv";
-        } else if (isHS) {
-          if (
-            currentAct.steps.length > 0 &&
-            !currentAct.steps[currentAct.steps.length - 1].hs
-          ) {
-            currentAct.steps[currentAct.steps.length - 1].hs = line;
-          } else {
-            currentAct.steps.push({ gv: "", hs: line });
-          }
-          lastRole = "hs";
-        } else if (currentAct.steps.length > 0) {
+        }
+      } else if (isHS) {
+        hsQueue.push(line);
+      } else if (currentAct && currentAct.steps.length > 0) {
+        if (hsQueue.length > 0) {
+          hsQueue[hsQueue.length - 1] += "\n" + line;
+        } else {
           const lastStep = currentAct.steps[currentAct.steps.length - 1];
-          if (lastRole === "hs" && lastStep.hs) {
-            lastStep.hs += "\n" + line;
-          } else {
-            lastStep.gv += "\n" + line;
-          }
+          lastStep.gv += "\n" + line;
         }
       }
       continue;
@@ -130,6 +130,18 @@ function parsePlanForPreview(rawPlan: string) {
   }
 
   if (currentAct) activities.push(currentAct);
+
+  // Ghép các bước HS theo thứ tự vào các bước GV tương ứng
+  if (hsQueue.length > 0) {
+    let qIdx = 0;
+    for (const act of activities) {
+      for (const st of act.steps) {
+        if (!st.hs && qIdx < hsQueue.length) {
+          st.hs = hsQueue[qIdx++];
+        }
+      }
+    }
+  }
 
   return { beforeSectionIII, activities, afterSectionIII };
 }
@@ -1514,37 +1526,66 @@ export default function HomePage() {
                                     </tr>
                                   </thead>
                                   <tbody>
-                                    {parsedPreview.activities.map((act, aIdx) => (
-                                      <React.Fragment key={aIdx}>
-                                        {/* Tiêu đề hoạt động - trải dài 2 cột, viền trên dưới chuẩn */}
-                                        <tr className="bg-orange-50/80 border-t border-b border-slate-300">
-                                          <td
-                                            colSpan={2}
-                                            className="p-2.5 font-bold text-orange-950 text-xs tracking-wide"
-                                          >
-                                            {act.title}
-                                          </td>
-                                        </tr>
-                                        {/* Các bước song hành: GV (trái) | HS (phải) */}
-                                        {act.steps.map((st, sIdx) => (
-                                          <tr
-                                            key={sIdx}
-                                            className="align-top border-b border-slate-200 hover:bg-slate-50/50 transition"
-                                          >
-                                            <td className="w-1/2 p-3 border-r border-slate-300 bg-white">
-                                              <p className="text-slate-800 leading-relaxed text-xs whitespace-pre-line">
-                                                {st.gv || "—"}
-                                              </p>
-                                            </td>
-                                            <td className="w-1/2 p-3 bg-white">
-                                              <p className="text-slate-800 leading-relaxed text-xs whitespace-pre-line">
-                                                {st.hs || "—"}
-                                              </p>
-                                            </td>
-                                          </tr>
+                                    <tr className="align-top">
+                                      {/* Cột GV: tất cả tiêu đề hoạt động và các bước GV */}
+                                      <td className="w-1/2 p-3 border-r border-slate-300 bg-white align-top">
+                                        {parsedPreview.activities.map((act, aIdx) => (
+                                          <div key={aIdx} className="mb-4 last:mb-0">
+                                            <p className="font-bold text-slate-900 mb-2 text-xs">
+                                              {act.title}
+                                            </p>
+                                            <div className="space-y-2">
+                                              {act.steps.map((st, sIdx) => {
+                                                const gvLen = (st.gv || "").length;
+                                                const hsLen = (st.hs || "").length;
+                                                const gvLines = Math.max(1, Math.ceil((gvLen + 2) / 45));
+                                                const hsLines = Math.max(1, Math.ceil((hsLen + 2) / 45));
+                                                const extraPadding = hsLines > gvLines ? (hsLines - gvLines) * 18 : 0;
+                                                return (
+                                                  <div
+                                                    key={sIdx}
+                                                    style={{ paddingBottom: `${extraPadding}px` }}
+                                                  >
+                                                    <p className="text-slate-800 leading-relaxed text-xs whitespace-pre-line">
+                                                      {ensureDash(st.gv)}
+                                                    </p>
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+                                          </div>
                                         ))}
-                                      </React.Fragment>
-                                    ))}
+                                      </td>
+                                      {/* Cột HS: các bước HS song hành bằng khoảng trống xuống dòng */}
+                                      <td className="w-1/2 p-3 bg-white align-top">
+                                        {parsedPreview.activities.map((act, aIdx) => (
+                                          <div key={aIdx} className="mb-4 last:mb-0">
+                                            <p className="font-bold opacity-0 select-none mb-2 text-xs" aria-hidden="true">
+                                              {act.title}
+                                            </p>
+                                            <div className="space-y-2">
+                                              {act.steps.map((st, sIdx) => {
+                                                const gvLen = (st.gv || "").length;
+                                                const hsLen = (st.hs || "").length;
+                                                const gvLines = Math.max(1, Math.ceil((gvLen + 2) / 45));
+                                                const hsLines = Math.max(1, Math.ceil((hsLen + 2) / 45));
+                                                const extraPadding = gvLines > hsLines ? (gvLines - hsLines) * 18 : 0;
+                                                return (
+                                                  <div
+                                                    key={sIdx}
+                                                    style={{ paddingBottom: `${extraPadding}px` }}
+                                                  >
+                                                    <p className="text-slate-800 leading-relaxed text-xs whitespace-pre-line">
+                                                      {ensureDash(st.hs)}
+                                                    </p>
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </td>
+                                    </tr>
                                   </tbody>
                                 </table>
                               </div>

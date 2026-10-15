@@ -13,9 +13,11 @@ async function main() {
   // });
   // const res = await model.generateContent([lessonText, "Mã chọn: 4.1.CB1a, 4.3.CB1a"]);
   // const data = JSON.parse(res.response.text());
-  const data = JSON.parse(fs.readFileSync("./sample-khbd.json", "utf8"));
+  const path = require("path");
+  const data = JSON.parse(fs.readFileSync(path.join(__dirname, "sample-khbd.json"), "utf8"));
 
   // 2) Dựng docx
-  fs.writeFileSync("KHBD_output.docx", await renderKhbd(data, { mon: selectedSubject, tiet: selectedLesson }));
+  fs.writeFileSync(path.join(__dirname, "KHBD_output.docx"), await renderKhbd(data, { mon: selectedSubject, tiet: selectedLesson }));
+  console.log("KHBD_output.docx generated successfully!");
 }
 main();
