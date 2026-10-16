@@ -216,7 +216,26 @@ function normalizeActivityName(raw) {
 }
 
 const B = { style: BorderStyle.SINGLE, size: 6, color: "000000" };
+const NONE = { style: BorderStyle.NONE, size: 0, color: "auto" };
 const BORDERS = { top: B, bottom: B, left: B, right: B };
+
+// Chuẩn hóa tên bài: xóa chữ "Bài" / "BÀI" bị lặp ở đầu chuỗi (ví dụ: "Bài Bài 1:...", "Bài Bài:...")
+function formatLessonTitle(raw) {
+  let s = clean(raw).trim();
+  if (!s) return "BÀI: …";
+
+  // Xóa mọi từ "Bài" / "BÀI" bị lặp ở đầu chuỗi
+  s = s.replace(/^(?:bài\s*)+/iu, "").trim();
+
+  if (s.startsWith(":")) {
+    const rest = s.replace(/^:\s*/, "").trim();
+    return rest ? `BÀI: ${rest}` : "BÀI: …";
+  }
+  if (/^\d+/.test(s)) {
+    return `BÀI ${s}`.trim();
+  }
+  return `BÀI: ${s}`.trim();
+}
 const cell = (children, o = {}) =>
   new TableCell({
     width: { size: COL_W, type: WidthType.DXA },
@@ -254,7 +273,7 @@ function buildDoc(d0, opts = {}) {
       [run(`MÔN: ${clean(d.mon).toUpperCase()}`, { bold: true }), run("\t"), run(`TIẾT: ${clean(d.tiet) || "…"}`, { bold: true })],
       { alignment: AlignmentType.CENTER, tabStops: [{ type: TabStopType.CENTER, position: 4678 }] }
     ),
-    center(`BÀI ${clean(d.bai)}`, { bold: true }),
+    center(formatLessonTitle(d.bai), { bold: true }),
     center(`Ngày soạn: ${clean(d.ngay_soan) || "… /… /…"}`),
     empty(),
 
@@ -276,12 +295,12 @@ function buildDoc(d0, opts = {}) {
     heading("III. CÁC HOẠT ĐỘNG DẠY HỌC CHỦ YẾU:")
   );
 
-  // Bảng 2 cột chuẩn KHBD_MAU.docx: gồm đúng 2 hàng
-  // Hàng 1: Tiêu đề cột GV | HS
-  // Hàng 2: Toàn bộ hoạt động GV và HS song hành bằng phím xuống dòng (Enter / empty paragraph)
-  // Spacing Paragraph trước và sau giữ cố định là 0
-  const gvChildren = [];
-  const hsChildren = [];
+  // Bảng 2 cột chuẩn KHBD_MAU.docx:
+  // Hàng 1: Tiêu đề cột GV | HS (viền bao quanh)
+  // Các hoạt động tiếp theo: mỗi hoạt động gồm 2 hàng:
+  // - Hàng tiêu đề hoạt động: hàng bảng gộp 2 cột (columnSpan: 2), viền CHỈ 2 BÊN trái & phải (top: NONE, bottom: NONE)
+  // - Hàng các bước của hoạt động: 2 ô (GV và HS) song hành, các cặp câu được cân bằng dòng bằng đoạn trống
+  const tableRows = [];
 
   console.log("=== BẮT ĐẦU CĂN HÀNG BẢNG 2 CỘT KHBD BẰNG ĐOẠN TRỐNG ===");
 
@@ -289,27 +308,31 @@ function buildDoc(d0, opts = {}) {
     const ten = normalizeActivityName(h.ten);
     const tg = thoiGian(h, ten);
     const titleText = `${hIdx + 1}. ${ten}: ${tg}`;
-    const n_title = measureLines(titleText, boldFont, 14, MAX_W_PT);
 
-    // Cách 1 dòng trống (Enter) giữa các hoạt động
-    if (hIdx > 0) {
-      gvChildren.push(empty());
-      hsChildren.push(empty());
-    }
+    // 1. Hàng tiêu đề hoạt động: 1 hàng bảng gộp 2 cột, viền CHỈ 2 BÊN (trái & phải)
+    const titleCell = new TableCell({
+      columnSpan: 2,
+      width: { size: COL_W * 2, type: WidthType.DXA },
+      borders: {
+        top: NONE,
+        bottom: NONE,
+        left: B,
+        right: B,
+      },
+      margins: { top: 100, bottom: 60, left: 100, right: 100 },
+      children: [
+        new Paragraph({
+          spacing: { line: 276, lineRule: LineRuleType.EXACTLY, before: 0, after: 0 },
+          children: [run(titleText, { bold: true })],
+        }),
+      ],
+    });
+    tableRows.push(new TableRow({ children: [titleCell] }));
+    console.log(`[Hoạt động ${hIdx + 1}] "${titleText}": Đã tạo hàng bảng tiêu đề (viền chỉ 2 bên)`);
 
-    // Tiêu đề hoạt động GV (In đậm, spacing trước/sau = 0)
-    gvChildren.push(
-      new Paragraph({
-        spacing: { line: 276, lineRule: LineRuleType.EXACTLY, before: 0, after: 0 },
-        children: [run(titleText, { bold: true })],
-      })
-    );
-
-    // Bù đoạn trống vào ĐẦU ô HS bằng số dòng của tiêu đề
-    for (let k = 0; k < n_title; k++) {
-      hsChildren.push(empty());
-    }
-    console.log(`[Hoạt động ${hIdx + 1}] "${titleText}": n_title=${n_title} -> bù ${n_title} đoạn trống vào ĐẦU ô HS`);
+    // 2. Hàng nội dung của hoạt động: 2 ô (GV và HS)
+    const gvChildren = [];
+    const hsChildren = [];
 
     // Từng cặp câu song hành giữa GV và HS
     steps(h).forEach((st, sIdx) => {
@@ -344,6 +367,35 @@ function buildDoc(d0, opts = {}) {
         console.log(`  [Cặp ${sIdx + 1}] n_gv=${n_gv}, n_hs=${n_hs} -> cân bằng (0 đoạn trống)`);
       }
     });
+
+    const isLastActivity = hIdx === hds.length - 1;
+    const bottomBorder = isLastActivity ? B : NONE;
+
+    const gvCell = new TableCell({
+      width: { size: COL_W, type: WidthType.DXA },
+      borders: {
+        top: NONE,
+        bottom: bottomBorder,
+        left: B,
+        right: B,
+      },
+      margins: { top: 60, bottom: 80, left: 100, right: 100 },
+      children: gvChildren.filter(Boolean),
+    });
+
+    const hsCell = new TableCell({
+      width: { size: COL_W, type: WidthType.DXA },
+      borders: {
+        top: NONE,
+        bottom: bottomBorder,
+        left: B,
+        right: B,
+      },
+      margins: { top: 60, bottom: 80, left: 100, right: 100 },
+      children: hsChildren.filter(Boolean),
+    });
+
+    tableRows.push(new TableRow({ children: [gvCell, hsCell] }));
   });
 
   const head = new TableRow({
@@ -365,23 +417,6 @@ function buildDoc(d0, opts = {}) {
     ],
   });
 
-  const contentRow = new TableRow({
-    children: [
-      new TableCell({
-        width: { size: COL_W, type: WidthType.DXA },
-        borders: { top: B, bottom: B, left: B, right: B },
-        margins: { top: 80, bottom: 80, left: 100, right: 100 },
-        children: gvChildren.filter(Boolean),
-      }),
-      new TableCell({
-        width: { size: COL_W, type: WidthType.DXA },
-        borders: { top: B, bottom: B, left: B, right: B },
-        margins: { top: 80, bottom: 80, left: 100, right: 100 },
-        children: hsChildren.filter(Boolean),
-      }),
-    ],
-  });
-
   body.push(
     new Table({
       width: { size: COL_W * 2, type: WidthType.DXA },
@@ -391,10 +426,10 @@ function buildDoc(d0, opts = {}) {
         bottom: B,
         left: B,
         right: B,
-        insideH: B,
-        insideV: B,
+        insideHorizontal: NONE,
+        insideVertical: B,
       },
-      rows: [head, contentRow],
+      rows: [head, ...tableRows],
     })
   );
 
@@ -417,4 +452,4 @@ function buildDoc(d0, opts = {}) {
 async function renderKhbd(data, opts = {}) {
   return Packer.toBuffer(buildDoc(data, opts)); // Buffer .docx
 }
-module.exports = { renderKhbd, clean, normalizeActor, measureLines };
+module.exports = { renderKhbd, clean, normalizeActor, measureLines, formatLessonTitle };

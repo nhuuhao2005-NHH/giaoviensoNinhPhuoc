@@ -84,6 +84,23 @@ function ensureDash(text: string, actor?: "GV" | "HS"): string {
   return `- ${t}`;
 }
 
+function formatLessonTitle(raw: string): string {
+  let s = (raw || "").trim();
+  if (!s) return "BÀI: …";
+
+  // Xóa mọi từ "Bài" / "BÀI" bị lặp ở đầu chuỗi (ví dụ: "Bài", "Bài Bài", "BÀI Bài", "BÀI BÀI")
+  s = s.replace(/^(?:bài\s*)+/i, "").trim();
+
+  if (s.startsWith(":")) {
+    const rest = s.replace(/^:\s*/, "").trim();
+    return rest ? `BÀI: ${rest}` : "BÀI: …";
+  }
+  if (/^\d+/.test(s)) {
+    return `BÀI ${s}`.trim();
+  }
+  return `BÀI: ${s}`.trim();
+}
+
 function parsePlanForPreview(rawPlan: string) {
   const lines = rawPlan.split("\n");
   const beforeSectionIII: string[] = [];
@@ -157,6 +174,11 @@ function parsePlanForPreview(rawPlan: string) {
           lastStep.gv += "\n" + line;
         }
       }
+      continue;
+    }
+
+    if (/^(?:bài|bai)\b/i.test(line)) {
+      beforeSectionIII.push(formatLessonTitle(line));
       continue;
     }
 
@@ -1556,17 +1578,22 @@ export default function HomePage() {
                                     </tr>
                                   </thead>
                                   <tbody>
-                                    <tr className="align-top font-serif">
-                                      {/* Cột GV: tiêu đề hoạt động và các bước GV (Spacing trước sau = 0, Enter xuống dòng canh hàng) */}
-                                      <td className="w-1/2 p-3 border-r border-slate-300 bg-white align-top">
-                                        {parsedPreview.activities.map((act, aIdx) => {
-                                          return (
-                                            <div key={aIdx}>
-                                              {/* Enter giữa các hoạt động */}
-                                              {aIdx > 0 && <p className="leading-relaxed text-xs m-0 p-0 select-none">&nbsp;</p>}
-                                              <p className="font-bold text-slate-900 leading-relaxed text-xs m-0 p-0">
-                                                {act.title}
-                                              </p>
+                                    {parsedPreview.activities.map((act, aIdx) => {
+                                      return (
+                                        <React.Fragment key={aIdx}>
+                                          {/* Hàng tiêu đề hoạt động: 1 hàng bảng gộp 2 cột, viền CHỈ 2 BÊN (trái & phải) */}
+                                          <tr className="border-l border-r border-slate-300 border-t-0 border-b-0 bg-white">
+                                            <td
+                                              colSpan={2}
+                                              className="p-2.5 font-bold text-slate-900 leading-relaxed text-xs border-l border-r border-slate-300 border-t-0 border-b-0"
+                                            >
+                                              {act.title}
+                                            </td>
+                                          </tr>
+                                          {/* Hàng nội dung hoạt động: 2 cột GV và HS song hành */}
+                                          <tr className="align-top font-serif border-l border-r border-slate-300 border-t-0 border-b-0">
+                                            {/* Cột GV */}
+                                            <td className="w-1/2 p-3 border-r border-slate-300 bg-white align-top border-t-0 border-b-0">
                                               {act.steps.map((st, sIdx) => {
                                                 const gvLen = (st.gv || "").length + 2;
                                                 const hsLen = (st.hs || "").length + 2;
@@ -1584,22 +1611,9 @@ export default function HomePage() {
                                                   </React.Fragment>
                                                 );
                                               })}
-                                            </div>
-                                          );
-                                        })}
-                                      </td>
-                                      {/* Cột HS: các bước HS song hành bằng phím xuống dòng (Enter) */}
-                                      <td className="w-1/2 p-3 bg-white align-top">
-                                        {parsedPreview.activities.map((act, aIdx) => {
-                                          const titleLines = Math.max(1, Math.ceil(act.title.length / 41));
-                                          return (
-                                            <div key={aIdx}>
-                                              {/* Enter giữa các hoạt động */}
-                                              {aIdx > 0 && <p className="leading-relaxed text-xs m-0 p-0 select-none">&nbsp;</p>}
-                                              {/* Phím xuống dòng (Enter) tương ứng với tiêu đề GV */}
-                                              {Array.from({ length: titleLines }).map((_, i) => (
-                                                <p key={i} className="leading-relaxed text-xs m-0 p-0 select-none">&nbsp;</p>
-                                              ))}
+                                            </td>
+                                            {/* Cột HS */}
+                                            <td className="w-1/2 p-3 bg-white align-top border-t-0 border-b-0">
                                               {act.steps.map((st, sIdx) => {
                                                 const gvLen = (st.gv || "").length + 2;
                                                 const hsLen = (st.hs || "").length + 2;
@@ -1617,11 +1631,11 @@ export default function HomePage() {
                                                   </React.Fragment>
                                                 );
                                               })}
-                                            </div>
-                                          );
-                                        })}
-                                      </td>
-                                    </tr>
+                                            </td>
+                                          </tr>
+                                        </React.Fragment>
+                                      );
+                                    })}
                                   </tbody>
                                 </table>
                               </div>

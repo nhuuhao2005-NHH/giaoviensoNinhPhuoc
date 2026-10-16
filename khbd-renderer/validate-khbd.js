@@ -1,6 +1,6 @@
 // validate-khbd.js — Kiểm tra & chuẩn hoá JSON của Gemini trước khi dựng Word.
 // Trả { data, errors }: errors là các lỗi KHÔNG tự sửa được -> nên gọi lại Gemini kèm danh sách lỗi.
-const { clean } = require("./render-khbd");
+const { clean, formatLessonTitle } = require("./render-khbd");
 
 const TOTAL_MINUTES = 35; // một tiết tiểu học; đổi nếu trường khác
 const KHOI_DONG = /kh[ởo]i\s*đ[ộo]ng/i;
@@ -11,6 +11,11 @@ function validateKhbd(raw, selectedCodes = [], selectedAiCodes = []) {
   const d = JSON.parse(JSON.stringify(raw || {}));
   const want = selectedCodes.map(bare).filter(Boolean);
   const wantAi = (selectedAiCodes || []).map(bare).filter(Boolean);
+
+  // Chuẩn hóa tên bài (xóa chữ Bài bị lặp)
+  if (d.bai) {
+    d.bai = formatLessonTitle(d.bai);
+  }
 
   // 1. Hoạt động
   d.hoat_dong = (d.hoat_dong || []).filter((h) => (h.cac_buoc || []).some((s) => clean(s.gv) || clean(s.hs)));
