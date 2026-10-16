@@ -63,6 +63,11 @@ NGUYÊN TẮC BẮT BUỘC SỐ 1: TÔN TRỌNG TUYỆT ĐỐI 100% NỘI DUNG C
 - "gv": SỬ DỤNG TRỰC TIẾP NỘI DUNG HOẠT ĐỘNG TỪ FILE GIÁO ÁN GỐC CỦA GIÁO VIÊN. TUYỆT ĐỐI KHÔNG TỰ Ý CHÈN THÊM TỪ "GV", không làm méo mó câu chữ, giữ đúng nguyên văn câu từ như file giáo án cung cấp.
 - "hs": SỬ DỤNG TRỰC TIẾP NỘI DUNG HOẠT ĐỘNG TỪ FILE GIÁO ÁN GỐC CỦA HỌC SINH. TUYỆT ĐỐI KHÔNG TỰ Ý CHÈN THÊM TỪ "HS", giữ đúng nguyên văn câu từ như file giáo án cung cấp.
 - BỔ SUNG NẾU THIẾU: Nếu trong giáo án gốc ở một bước nào đó chỉ có việc của GV mà chưa có việc của HS hoặc ghi quá ngắn, bạn CẦN BỔ SUNG THÊM hành động tương ứng của học sinh (ví dụ: "Lắng nghe, quan sát và thực hiện theo hướng dẫn.") để giữa 2 hoạt động có sự nhất quán và song hành chặt chẽ. TUYỆT ĐỐI KHÔNG ĐƯỢC XÓA BỚT việc làm của GV và không tự ý chèn thêm các chữ cái "GV" hay "HS" vào đầu câu.
+- QUY TẮC BẮT BUỘC VỀ XUỐNG DÒNG VÀ TÊN BÀI TẬP:
+  + Mọi hoạt động, câu hỏi, câu lệnh của giáo viên và học sinh PHẢI XUỐNG DÒNG RÕ RÀNG (dùng ký tự \\n), TUYỆT ĐỐI KHÔNG ĐƯỢC VIẾT GỘP NỐI LIỀN NHAU TRÊN CÙNG MỘT DÒNG.
+  + TÊN BÀI TẬP (ví dụ "Bài 1: ...", "Bài 2: ...", "Hoạt động 1: ...", "a) ...", "b) ..."): PHẢI ĐỨNG RIÊNG MỘT DÒNG VÀ TUYỆT ĐỐI KHÔNG ĐƯỢC CÓ DẤU GẠCH ĐẦU DÒNG "-" Ở TRƯỚC.
+  + Các câu hướng dẫn, yêu cầu của giáo viên đi theo bài tập (ví dụ: "- GV yêu cầu HS quan sát...", "- GV cho HS nhận xét...") phải xuống dòng và bắt đầu bằng dấu gạch đầu dòng "- ".
+  + Tách mỗi bài tập hoặc hoạt động nhỏ thành các bước độc lập trong "cac_buoc" để hoạt động của GV và HS song hành từng bước một.
 
 3. TIÊU ĐỀ BÀI DẠY VÀ THỜI GIAN:
 - bai: TẤT CẢ TÊN BÀI PHẢI LÀ CHỮ IN HOA (ví dụ: "3: SỬ DỤNG QUẠT ĐIỆN", "1: LÀM QUEN VỚI MÁY TÍNH"). Nếu giáo án gốc có chữ "Bài" thì chỉ lấy số bài và tên bài, xóa chữ "Bài" bị lặp (ví dụ "1: ...").

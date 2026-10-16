@@ -147,6 +147,91 @@ function thoiGian(h, ten) {
 const noLabel = (t) => t.replace(/^\s*Liên hệ\s*[:\-–]\s*/i, "");
 
 // ---- Mỗi hoạt động gồm các "bước" song hành {gv, hs, ma_nls?} sử dụng trực tiếp nội dung giáo án
+// ---- Làm sạch văn bản nhưng giữ nguyên các dấu xuống dòng \n
+function cleanPreserveLines(s) {
+  return String(s ?? "")
+    .replace(/\*\*|__|`/g, "")
+    .replace(/^[#>]+\s*/gm, "")
+    .split("\n")
+    .map((line) => line.replace(/[ \t]+/g, " ").trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
+// ---- Phân tích và tách các câu/dòng hoạt động thông minh, xử lý tên bài tập không có dấu "-" ở trước
+function parseStepLines(rawText) {
+  let s = String(rawText ?? "").trim();
+  if (!s) return [];
+
+  // 1. Tiền xử lý ngắt dòng khi các câu bị viết dính liền trên 1 dòng:
+  // a) Ngắt dòng trước các dấu gạch ngang đầu dòng ở giữa câu: " - ", " – ", " • "
+  s = s.replace(/(?<=[^\n])\s+[-–•*]\s+(?=[A-ZÀ-Ỹa-zà-ỹ0-9_])/g, "\n- ");
+
+  // b) Ngắt dòng trước các tên bài tập hoặc tiêu đề mục nếu bị viết dính liền (ví dụ: "... Bài 1: ...", "... Bài 2: ...")
+  s = s.replace(/(?<=[^\n])\s+(?=(?:bài\s*(?:tập\s*)?\d+|hoạt\s*động\s*\d+|phiếu\s*(?:học\s*tập\s*)?\d+)[:.])/gi, "\n");
+
+  // c) Ngắt dòng trước các tiểu mục chữ cái: ví dụ "... a, ..." hoặc "... b, ..."
+  s = s.replace(/(?<=[.!?])\s+(?=[a-d]\s*[,.)]\s+)/gi, "\n");
+
+  const rawLines = s
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const parsedLines = [];
+
+  for (const line of rawLines) {
+    // 1. Kiểm tra dòng tiêu đề Tích hợp AI
+    if (/^\*?\s*Tích hợp\s*(?:Trí tuệ nhân tạo\s*)?AI/i.test(line)) {
+      parsedLines.push({
+        type: "ai_header",
+        text: "*Tích hợp AI:",
+      });
+      continue;
+    }
+
+    // 2. Kiểm tra dòng TÊN BÀI TẬP hoặc TIÊU ĐỀ TIỂU MỤC
+    // Bắt đầu bằng: "Bài 1: ...", "Bài tập 2: ...", "Hoạt động 1: ...", hoặc các tiểu mục "a, ...", "b, ..."
+    const isExerciseTitle = /^(?:[-+•*]\s*)?(?:bài\s*(?:tập\s*)?\d+|hoạt\s*động\s*\d+|phiếu\s*(?:học\s*tập\s*)?\d+)/i.test(line);
+    const isSubSection = /^(?:[-+•*]\s*)?[a-d]\s*[,.)]\s+/i.test(line) && !line.includes("GV") && !line.includes("HS");
+
+    if (isExerciseTitle || isSubSection) {
+      // Tên bài tập: BẮT BUỘC KHÔNG CÓ DẤU GẠCH ĐẦU DÒNG "-" Ở TRƯỚC!
+      const cleanTitle = line.replace(/^[-+•*]\s*/, "").trim();
+      parsedLines.push({
+        type: "title",
+        text: cleanTitle,
+      });
+      continue;
+    }
+
+    // 3. Dòng liên hệ giáo dục của Tích hợp AI
+    if (/^(?:[-+•*]\s*)?(?:GV\s*)?liên hệ giáo dục\s*[:\-–]/i.test(line)) {
+      const cleanContent = line.replace(/^[-+•*]\s*/, "").trim();
+      const content = cleanContent.startsWith("GV liên hệ giáo dục:")
+        ? cleanContent
+        : `GV liên hệ giáo dục: ${cleanContent.replace(/^liên hệ giáo dục\s*[:\-–]\s*/i, "")}`;
+      parsedLines.push({
+        type: "dash",
+        text: content,
+      });
+      continue;
+    }
+
+    // 4. Câu nội dung hoạt động bình thường
+    const cleanContent = line.replace(/^[-+•*]\s*/, "").trim();
+    if (cleanContent) {
+      parsedLines.push({
+        type: "dash",
+        text: cleanContent,
+      });
+    }
+  }
+
+  return parsedLines;
+}
+
+// ---- Mỗi hoạt động gồm các "bước" song hành {gv, hs, ma_nls?} sử dụng trực tiếp nội dung giáo án
 function steps(h) {
   let st = Array.isArray(h.cac_buoc) ? h.cac_buoc : [];
   if (!st.length) { // dự phòng định dạng cũ: ghép theo thứ tự gv[i] <-> hs[i]
@@ -158,31 +243,10 @@ function steps(h) {
       const ma = x.ma_nls ? bareCode(x.ma_nls) : "";
       const isAI = /^\*?\s*Tích hợp\s*(?:Trí tuệ nhân tạo\s*)?AI/i.test(String(x.gv || "").trim());
 
-      let gv = "";
-      let hs = "";
-
-      if (isAI) {
-        // Giữ nguyên các dòng của khối Tích hợp AI
-        const gvLines = String(x.gv || "")
-          .split("\n")
-          .map((l) => l.trim())
-          .filter(Boolean);
-        if (gvLines.length > 0 && !gvLines[0].startsWith("*Tích hợp AI:")) {
-          gvLines[0] = "*Tích hợp AI:";
-        }
-        gv = gvLines.join("\n");
-
-        const hsLines = String(x.hs || "")
-          .split("\n")
-          .map((l) => l.trim())
-          .filter(Boolean);
-        hs = hsLines.join("\n");
-      } else {
-        const rawGv = inlineCodes(noLabel(clean(x.gv))) + (ma ? ` (${ma})` : "");
-        const rawHs = inlineCodes(noLabel(clean(x.hs)));
-        gv = clean(x.gv) ? rawGv.trim() : "";
-        hs = clean(x.hs) ? rawHs.trim() : "";
-      }
+      const rawGv = inlineCodes(noLabel(cleanPreserveLines(x.gv))) + (ma ? ` (${ma})` : "");
+      const rawHs = inlineCodes(noLabel(cleanPreserveLines(x.hs)));
+      const gv = rawGv.trim();
+      const hs = rawHs.trim();
 
       return { gv, hs, isAI };
     })
@@ -354,80 +418,77 @@ function buildDoc(d0, opts = {}) {
     const gvChildren = [];
     const hsChildren = [];
 
-    // Từng cặp câu song hành giữa GV và HS
+    // Từng cặp câu/bước song hành giữa GV và HS
     steps(h).forEach((st, sIdx) => {
-      if (st.isAI) {
-        // Xử lý khối Tích hợp AI (gồm tiêu đề *Tích hợp AI:, các gạch đầu dòng và dòng GV liên hệ giáo dục)
-        const linesGv = String(st.gv || "").split("\n").map((l) => l.trim()).filter(Boolean);
-        const linesHs = String(st.hs || "").split("\n").map((l) => l.trim()).filter(Boolean);
+      const gvParsed = parseStepLines(st.gv);
+      const hsParsed = parseStepLines(st.hs);
 
-        let n_gv = 0;
-        let n_hs = 0;
+      let n_gv = 0;
+      let n_hs = 0;
 
-        // Cột GV:
-        if (linesGv.length > 0) {
-          // Dòng đầu: *Tích hợp AI: (in đậm, in nghiêng)
-          const firstLine = linesGv[0].startsWith("*Tích hợp AI:") ? "*Tích hợp AI:" : linesGv[0];
+      // Cột GV:
+      gvParsed.forEach((item) => {
+        if (item.type === "title") {
+          // Tên bài tập / tiểu mục: KHÔNG CÓ DẤU "-" Ở ĐẦU, IN ĐẬM
           gvChildren.push(
             new Paragraph({
               spacing: { line: 276, lineRule: LineRuleType.EXACTLY, before: 0, after: 0 },
-              children: [run(firstLine, { bold: true, italics: true })],
+              alignment: AlignmentType.JUSTIFIED,
+              children: [run(item.text, { bold: true })],
             })
           );
-          n_gv += measureLines(firstLine, boldFont, 14, MAX_W_PT);
-
-          // Các dòng gạch đầu dòng tiếp theo
-          for (let i = 1; i < linesGv.length; i++) {
-            const cleanT = linesGv[i].replace(/^[-+•*]\s*/, "");
-            const dLine = `- ${cleanT}`;
-            gvChildren.push(dashLine(dLine));
-            n_gv += measureLines(dLine, regularFont, 14, MAX_W_PT);
-          }
-        }
-
-        // Cột HS:
-        for (let i = 0; i < linesHs.length; i++) {
-          const cleanT = linesHs[i].replace(/^[-+•*]\s*/, "");
-          const dLine = `- ${cleanT}`;
-          hsChildren.push(dashLine(dLine));
-          n_hs += measureLines(dLine, regularFont, 14, MAX_W_PT);
-        }
-
-        // Căn hàng bằng đoạn trống cho khối Tích hợp AI
-        const diff = Math.abs(n_gv - n_hs);
-        if (n_gv > n_hs) {
-          for (let k = 0; k < diff; k++) {
-            hsChildren.push(empty());
-          }
-          console.log(`  [Khối *Tích hợp AI:] n_gv=${n_gv}, n_hs=${n_hs} -> bù ${diff} đoạn trống vào HS`);
-        } else if (n_hs > n_gv) {
-          for (let k = 0; k < diff; k++) {
-            gvChildren.push(empty());
-          }
-          console.log(`  [Khối *Tích hợp AI:] n_gv=${n_gv}, n_hs=${n_hs} -> bù ${diff} đoạn trống vào GV`);
+          n_gv += measureLines(item.text, boldFont, 14, MAX_W_PT);
+        } else if (item.type === "ai_header") {
+          // Tiêu đề *Tích hợp AI: in đậm, in nghiêng
+          gvChildren.push(
+            new Paragraph({
+              spacing: { line: 276, lineRule: LineRuleType.EXACTLY, before: 0, after: 0 },
+              children: [run("*Tích hợp AI:", { bold: true, italics: true })],
+            })
+          );
+          n_gv += measureLines("*Tích hợp AI:", boldFont, 14, MAX_W_PT);
         } else {
-          console.log(`  [Khối *Tích hợp AI:] n_gv=${n_gv}, n_hs=${n_hs} -> cân bằng (0 đoạn trống)`);
+          // Câu hoạt động bình thường: bắt đầu bằng "- "
+          const dashText = `- ${item.text}`;
+          gvChildren.push(dashLine(dashText));
+          n_gv += measureLines(dashText, regularFont, 14, MAX_W_PT);
         }
-        return;
+      });
+
+      // Cột HS:
+      hsParsed.forEach((item) => {
+        if (item.type === "title") {
+          // Tiêu đề tương ứng bên HS (nếu có)
+          hsChildren.push(
+            new Paragraph({
+              spacing: { line: 276, lineRule: LineRuleType.EXACTLY, before: 0, after: 0 },
+              alignment: AlignmentType.JUSTIFIED,
+              children: [run(item.text, { bold: true })],
+            })
+          );
+          n_hs += measureLines(item.text, boldFont, 14, MAX_W_PT);
+        } else if (item.type === "ai_header") {
+          hsChildren.push(empty());
+          n_hs += 1;
+        } else {
+          // Hành động bình thường của HS: bắt đầu bằng "- "
+          const dashText = `- ${item.text}`;
+          hsChildren.push(dashLine(dashText));
+          n_hs += measureLines(dashText, regularFont, 14, MAX_W_PT);
+        }
+      });
+
+      // Đảm bảo không để ô trống hoàn toàn nếu một bên có nội dung
+      if (gvParsed.length === 0 && hsParsed.length > 0) {
+        gvChildren.push(empty());
+        n_gv += 1;
+      }
+      if (hsParsed.length === 0 && gvParsed.length > 0) {
+        hsChildren.push(empty());
+        n_hs += 1;
       }
 
-      // Câu bài học thông thường
-      const cleanLine = (t) => String(t ?? "").trim().replace(/^[-+•*]\s*/, "");
-      const gvClean = cleanLine(st.gv);
-      const hsClean = cleanLine(st.hs);
-
-      const dashGv = gvClean ? `- ${gvClean}` : "";
-      const dashHs = hsClean ? `- ${hsClean}` : "";
-
-      // Đo số dòng chữ thật
-      const n_gv = measureLines(dashGv, regularFont, 14, MAX_W_PT);
-      const n_hs = measureLines(dashHs, regularFont, 14, MAX_W_PT);
-
-      // Thêm dòng gạch đầu dòng của GV và HS
-      gvChildren.push(dashLine(dashGv));
-      hsChildren.push(dashLine(dashHs));
-
-      // Bên nào ít hơn thì thêm |n_gv - n_hs| đoạn trống ngay SAU câu đó, rồi mới sang cặp kế tiếp
+      // Cân bằng số dòng giữa GV và HS bằng các đoạn trống empty()
       const diff = Math.abs(n_gv - n_hs);
       if (n_gv > n_hs) {
         for (let k = 0; k < diff; k++) {
@@ -528,4 +589,4 @@ function buildDoc(d0, opts = {}) {
 async function renderKhbd(data, opts = {}) {
   return Packer.toBuffer(buildDoc(data, opts)); // Buffer .docx
 }
-module.exports = { renderKhbd, clean, normalizeActor, measureLines, formatLessonTitle };
+module.exports = { renderKhbd, clean, normalizeActor, measureLines, formatLessonTitle, parseStepLines };

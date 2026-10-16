@@ -51,11 +51,19 @@ function ensureDash(text: string): string {
 }
 
 function renderStepContent(text: string) {
-  const t = (text || "").trim();
-  if (!t) return null;
+  let s = (text || "").trim();
+  if (!s) return null;
 
-  if (t.includes("*Tích hợp AI:") || /tích hợp\s*(?:trí tuệ nhân tạo\s*)?ai/i.test(t)) {
-    const lines = t.split("\n").map((l) => l.trim()).filter(Boolean);
+  // 1. Tiền xử lý ngắt dòng thông minh khi các câu bị viết dính liền trên 1 dòng
+  s = s.replace(/(?<=[^\n])\s+[-–•*]\s+(?=[A-ZÀ-Ỹa-zà-ỹ0-9_])/g, "\n- ");
+  s = s.replace(/(?<=[^\n])\s+(?=(?:bài\s*(?:tập\s*)?\d+|hoạt\s*động\s*\d+|phiếu\s*(?:học\s*tập\s*)?\d+)[:.])/gi, "\n");
+  s = s.replace(/(?<=[.!?])\s+(?=[a-d]\s*[,.)]\s+)/gi, "\n");
+
+  const lines = s.split("\n").map((l) => l.trim()).filter(Boolean);
+  if (lines.length === 0) return null;
+
+  // Nếu là khối Tích hợp AI
+  if (s.includes("*Tích hợp AI:") || /tích hợp\s*(?:trí tuệ nhân tạo\s*)?ai/i.test(s)) {
     return (
       <div className="space-y-1 my-1 p-2 bg-indigo-50/50 border border-indigo-200 rounded-lg text-left">
         {lines.map((line, idx) => {
@@ -74,7 +82,7 @@ function renderStepContent(text: string) {
             );
           }
           return (
-            <p key={idx} className="text-slate-800 text-xs m-0 p-0 pl-1.5">
+            <p key={idx} className="text-slate-800 text-xs m-0 p-0 pl-1.5 leading-relaxed text-justify">
               - {line.replace(/^[-+•*]\s*/, "")}
             </p>
           );
@@ -83,10 +91,32 @@ function renderStepContent(text: string) {
     );
   }
 
+  // Khối bài tập hoặc hoạt động thông thường: phân tách từng dòng rõ ràng
   return (
-    <p className="text-slate-800 leading-relaxed text-xs whitespace-pre-line m-0 p-0 text-justify">
-      {ensureDash(t)}
-    </p>
+    <div className="space-y-1 text-left">
+      {lines.map((line, idx) => {
+        // Kiểm tra xem có phải tên bài tập hoặc tiêu đề tiểu mục không
+        const isExerciseTitle = /^(?:[-+•*]\s*)?(?:bài\s*(?:tập\s*)?\d+|hoạt\s*động\s*\d+|phiếu\s*(?:học\s*tập\s*)?\d+)/i.test(line);
+        const isSubSection = /^(?:[-+•*]\s*)?[a-d]\s*[,.)]\s+/i.test(line) && !line.includes("GV") && !line.includes("HS");
+
+        if (isExerciseTitle || isSubSection) {
+          // Tên bài tập: BẮT BUỘC KHÔNG CÓ DẤU GẠCH ĐẦU DÒNG "-" Ở TRƯỚC!
+          const cleanTitle = line.replace(/^[-+•*]\s*/, "").trim();
+          return (
+            <p key={idx} className="font-bold text-slate-900 text-xs m-0 pt-1 pb-0.5">
+              {cleanTitle}
+            </p>
+          );
+        }
+
+        const cleanContent = line.replace(/^[-+•*]\s*/, "").trim();
+        return (
+          <p key={idx} className="text-slate-800 leading-relaxed text-xs m-0 p-0 pl-1.5 text-justify">
+            - {cleanContent}
+          </p>
+        );
+      })}
+    </div>
   );
 }
 
