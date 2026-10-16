@@ -6,6 +6,7 @@ const { responseSchema, systemInstruction } = require("./schema-and-prompt");
 const { validateKhbd } = require("./validate-khbd");
 const { renderKhbd } = require("./render-khbd");
 const { resolveAIPlan, buildAIInstructionPrompt } = require("./ai-rules");
+const { resolveNLSPlan, buildNLSInstructionPrompt } = require("./nls-rules");
 
 const MAX_TRIES = 3;
 
@@ -121,10 +122,14 @@ async function processKhbd(file, options) {
     askParts.push(`Đồ dùng và thiết bị dạy học: ${options.infrastructureLevel}`);
   }
 
+  let nlsPlan = null;
   if (options.codes && options.codes.length > 0) {
+    nlsPlan = resolveNLSPlan(options.infrastructureLevel, options.codes, options.teacherSuggestions);
+    const nlsGuidance = buildNLSInstructionPrompt(nlsPlan);
     askParts.push(
       `Mã Năng lực số cần tích hợp (chỉ các mã này):\n` +
-        options.codes.map((c) => `- ${c.ma}: ${c.noi_dung}`).join("\n")
+        options.codes.map((c) => `- ${c.ma}: ${c.noi_dung}`).join("\n") +
+        `\n\n${nlsGuidance}`
     );
   } else {
     askParts.push(`Không tích hợp Năng lực số (để nang_luc_so rỗng []).`);
@@ -217,7 +222,7 @@ async function processKhbd(file, options) {
       continue;
     }
 
-    const { data, errors } = validateKhbd(json, selected, selectedAi, aiPlan);
+    const { data, errors } = validateKhbd(json, selected, selectedAi, aiPlan, nlsPlan);
     last = data;
     if (!errors.length) return renderKhbd(data, { mon: options.mon, tiet: options.tiet });
     feedback = "Sửa các lỗi sau rồi trả lại toàn bộ JSON:\n- " + errors.join("\n- ");

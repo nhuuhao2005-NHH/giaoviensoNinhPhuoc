@@ -121,6 +121,35 @@ function renderStepContent(text: string) {
     );
   }
 
+  // Nếu là khối Tích hợp Năng lực số
+  if (s.includes("*Tích hợp Năng lực số:") || /tích hợp\s*(?:năng lực số|nls)/i.test(s)) {
+    return (
+      <div className="space-y-1 my-1 p-2 bg-emerald-50/50 border border-emerald-200 rounded-lg text-left">
+        {lines.map((line, idx) => {
+          if (line.startsWith("*Tích hợp Năng lực số:") || line.toLowerCase().startsWith("tích hợp năng lực số")) {
+            return (
+              <p key={idx} className="font-bold italic text-emerald-800 text-xs m-0 p-0">
+                *Tích hợp Năng lực số:
+              </p>
+            );
+          }
+          if (line.includes("GV liên hệ giáo dục:") || line.includes("liên hệ giáo dục:")) {
+            return (
+              <p key={idx} className="italic text-emerald-900 font-medium text-xs m-0 p-0 pl-1.5">
+                - {line.replace(/^[-+•*]\s*/, "")}
+              </p>
+            );
+          }
+          return (
+            <p key={idx} className="text-slate-800 text-xs m-0 p-0 pl-1.5 leading-relaxed text-justify">
+              - {line.replace(/^[-+•*]\s*/, "")}
+            </p>
+          );
+        })}
+      </div>
+    );
+  }
+
   // Khối bài tập hoặc hoạt động thông thường: phân tách từng dòng rõ ràng
   return (
     <div className="space-y-1 text-left">

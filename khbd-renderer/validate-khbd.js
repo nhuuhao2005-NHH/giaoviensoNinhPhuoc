@@ -7,12 +7,21 @@ const {
   generateDefaultAIHsBlock,
   normalizeAIBlock,
 } = require("./ai-rules");
+const {
+  resolveNLSPlan,
+  generateDefaultNLSBlock,
+  generateDefaultNLSHsBlock,
+  normalizeNLSBlock,
+} = require("./nls-rules");
 
 const TOTAL_MINUTES = 35; // một tiết tiểu học; đổi nếu trường khác
 const KHOI_DONG = /kh[ởo]i\s*đ[ộo]ng/i;
-const bare = (m) => clean(m).replace(/[\[\]()]/g, "").replace(/^Mã\s*/i, "").trim();
+const bare = (m) => {
+  const s = typeof m === "object" && m !== null ? m.ma || "" : String(m || "");
+  return clean(s).replace(/[\[\]()]/g, "").replace(/^Mã\s*/i, "").trim();
+};
 
-function validateKhbd(raw, selectedCodes = [], selectedAiCodes = [], aiPlan = null) {
+function validateKhbd(raw, selectedCodes = [], selectedAiCodes = [], aiPlan = null, nlsPlan = null) {
   const errors = [];
   const d = JSON.parse(JSON.stringify(raw || {}));
   const want = selectedCodes.map(bare).filter(Boolean);
@@ -54,7 +63,7 @@ function validateKhbd(raw, selectedCodes = [], selectedAiCodes = [], aiPlan = nu
     if (diff !== 0 && hasKD) others.reduce((a, b) => (b.thoi_gian_phut > a.thoi_gian_phut ? b : a)).thoi_gian_phut += diff;
   }
 
-  // 3. Mã Năng lực số: đúng các mã đã chọn, không thừa, mỗi mã được lồng vào hoạt động ít nhất 1 lần
+  // 3. Mã Năng lực số: đúng các mã đã chọn, không thừa, tạo khối *Tích hợp Năng lực số:
   d.nang_luc_so = (d.nang_luc_so || []).map((x) => ({ ma: bare(x.ma), noi_dung: clean(x.noi_dung) }));
   if (want.length) {
     const got = d.nang_luc_so.map((x) => x.ma);
@@ -63,27 +72,47 @@ function validateKhbd(raw, selectedCodes = [], selectedAiCodes = [], aiPlan = nu
       if (!got.includes(m)) {
         d.nang_luc_so.push({ ma: m, noi_dung: "" });
       }
-      const used = d.hoat_dong.some((h) => h.cac_buoc.some((s) => bare(s.ma_nls) === m));
-      if (!used) {
-        // Tự động gán mã vào một bước phù hợp thay vì báo lỗi bắt Gemini viết lại làm hỏng nội dung gốc
-        let assigned = false;
-        for (const h of d.hoat_dong) {
-          const name = h.ten.toLowerCase();
-          if (name.includes("khám phá") || name.includes("luyện tập")) {
-            const stepWithoutCode = h.cac_buoc.find((st) => !st.ma_nls);
-            if (stepWithoutCode) {
-              stepWithoutCode.ma_nls = m;
-              assigned = true;
-              break;
-            }
-          }
-        }
-        if (!assigned && d.hoat_dong[0] && d.hoat_dong[0].cac_buoc[0]) {
-          d.hoat_dong[0].cac_buoc[0].ma_nls = m;
+    });
+
+    // Chuẩn bị plan NLS nếu chưa truyền vào
+    const activeNlsPlan = nlsPlan || resolveNLSPlan("Tivi/máy chiếu", want);
+
+    // Tìm xem trong hoat_dong đã có bước Tích hợp Năng lực số chưa
+    let foundNLSStep = false;
+    for (const h of d.hoat_dong) {
+      for (const st of h.cac_buoc) {
+        const gvText = String(st.gv || "");
+        if (gvText.includes("*Tích hợp Năng lực số:") || /tích hợp\s*(?:năng lực số|nls)/i.test(gvText)) {
+          foundNLSStep = true;
+          const normalized = normalizeNLSBlock(st.gv, st.hs, activeNlsPlan);
+          st.gv = normalized.gv;
+          st.hs = normalized.hs;
+          break;
         }
       }
-    });
-    d.hoat_dong.forEach((h) => h.cac_buoc.forEach((s) => { if (s.ma_nls && !want.includes(bare(s.ma_nls))) delete s.ma_nls; }));
+      if (foundNLSStep) break;
+    }
+
+    // Nếu chưa có khối Tích hợp Năng lực số, tự động bổ sung vào cuối Khám phá hoặc Luyện tập
+    if (!foundNLSStep && d.hoat_dong.length > 0) {
+      let targetAct = d.hoat_dong.find((h) => h.ten.toLowerCase().includes("khám phá"));
+      if (!targetAct) {
+        targetAct = d.hoat_dong.find((h) => h.ten.toLowerCase().includes("luyện tập"));
+      }
+      if (!targetAct) {
+        targetAct = d.hoat_dong.find((h) => h.ten.toLowerCase().includes("vận dụng"));
+      }
+      if (!targetAct) {
+        targetAct = d.hoat_dong[d.hoat_dong.length - 1];
+      }
+
+      if (targetAct && Array.isArray(targetAct.cac_buoc)) {
+        targetAct.cac_buoc.push({
+          gv: generateDefaultNLSBlock(activeNlsPlan),
+          hs: generateDefaultNLSHsBlock(activeNlsPlan),
+        });
+      }
+    }
   }
 
   // 4. Mã Trí tuệ nhân tạo (AI): chuẩn hóa & lọc đúng mã đã chọn nếu có

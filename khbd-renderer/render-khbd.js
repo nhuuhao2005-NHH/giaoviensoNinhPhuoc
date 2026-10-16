@@ -212,11 +212,19 @@ function parseStepLines(rawText) {
   const parsedLines = [];
 
   for (const line of rawLines) {
-    // 1. Kiểm tra dòng tiêu đề Tích hợp AI
+    // 1. Kiểm tra dòng tiêu đề Tích hợp AI hoặc Tích hợp Năng lực số
     if (/^\*?\s*Tích hợp\s*(?:Trí tuệ nhân tạo\s*)?AI/i.test(line)) {
       parsedLines.push({
         type: "ai_header",
         text: "*Tích hợp AI:",
+      });
+      continue;
+    }
+
+    if (/^\*?\s*Tích hợp\s*(?:Năng lực số|NLS)/i.test(line)) {
+      parsedLines.push({
+        type: "nls_header",
+        text: "*Tích hợp Năng lực số:",
       });
       continue;
     }
@@ -501,6 +509,15 @@ function buildDoc(d0, opts = {}) {
             })
           );
           n_gv += measureLines("*Tích hợp AI:", boldFont, 14, MAX_W_PT);
+        } else if (item.type === "nls_header") {
+          // Tiêu đề *Tích hợp Năng lực số: in đậm, in nghiêng
+          gvChildren.push(
+            new Paragraph({
+              spacing: { line: 276, lineRule: LineRuleType.EXACTLY, before: 0, after: 0 },
+              children: [run("*Tích hợp Năng lực số:", { bold: true, italics: true })],
+            })
+          );
+          n_gv += measureLines("*Tích hợp Năng lực số:", boldFont, 14, MAX_W_PT);
         } else {
           // Câu hoạt động bình thường: bắt đầu bằng "- "
           const dashText = `- ${item.text}`;
