@@ -319,24 +319,35 @@ const empty = () => {
   return p;
 };
 
+function getParagraphText(p) {
+  if (!p) return "";
+  let text = "";
+  function walk(node) {
+    if (!node) return;
+    if (typeof node === "string") {
+      text += node;
+      return;
+    }
+    if (typeof node.text === "string") {
+      text += node.text;
+    }
+    if (Array.isArray(node.root)) {
+      for (const child of node.root) walk(child);
+    }
+  }
+  walk(p);
+  return text.trim();
+}
+
 function isEmptyParagraph(p) {
   if (!p) return true;
   if (p.__isEmpty) return true;
   try {
-    const root = p.root;
-    if (Array.isArray(root)) {
-      for (const item of root) {
-        if (item && item.root && Array.isArray(item.root)) {
-          for (const sub of item.root) {
-            if (typeof sub === "string" && sub.trim()) return false;
-            if (sub && typeof sub.text === "string" && sub.text.trim()) return false;
-          }
-        }
-      }
-      return true;
-    }
-  } catch {}
-  return false;
+    const text = getParagraphText(p);
+    return text.length === 0;
+  } catch {
+    return false;
+  }
 }
 
 function normalizeActivityName(raw) {
