@@ -25,9 +25,16 @@ function validateKhbd(raw, selectedCodes = [], selectedAiCodes = []) {
       .replace(/Luyện\s*tập\s*thực\s*hành/gi, "Luyện tập, thực hành")
       .replace(/Vận\s*dụng\s*trải\s*nghiệm/gi, "Vận dụng, trải nghiệm");
     h.cac_buoc = h.cac_buoc.filter((s) => clean(s.gv) || clean(s.hs));
-    h.cac_buoc.forEach((s, i) => {
-      if (!clean(s.gv) || !clean(s.hs))
-        errors.push(`Hoạt động "${h.ten}", bước ${i + 1}: thiếu việc của ${clean(s.gv) ? "HS" : "GV"} — GV và HS phải song hành.`);
+    h.cac_buoc.forEach((s) => {
+      const gvClean = clean(s.gv);
+      const hsClean = clean(s.hs);
+      if (gvClean && !hsClean) {
+        // Tôn trọng 100% nội dung của GV, tự động bổ sung việc của HS để đảm bảo tính nhất quán và song hành
+        s.hs = "HS lắng nghe, quan sát và thực hiện theo hướng dẫn của GV.";
+      } else if (!gvClean && hsClean) {
+        // Tự động bổ sung việc của GV
+        s.gv = "GV quan sát, hướng dẫn và hỗ trợ HS thực hiện.";
+      }
     });
   });
 
@@ -47,9 +54,28 @@ function validateKhbd(raw, selectedCodes = [], selectedAiCodes = []) {
     const got = d.nang_luc_so.map((x) => x.ma);
     d.nang_luc_so = d.nang_luc_so.filter((x) => want.includes(x.ma)); // bỏ mã thừa
     want.forEach((m) => {
-      if (!got.includes(m)) errors.push(`Thiếu mã ${m} trong nang_luc_so.`);
+      if (!got.includes(m)) {
+        d.nang_luc_so.push({ ma: m, noi_dung: "" });
+      }
       const used = d.hoat_dong.some((h) => h.cac_buoc.some((s) => bare(s.ma_nls) === m));
-      if (!used) errors.push(`Mã ${m} chưa được lồng vào bước nào của hoạt động (ma_nls).`);
+      if (!used) {
+        // Tự động gán mã vào một bước phù hợp thay vì báo lỗi bắt Gemini viết lại làm hỏng nội dung gốc
+        let assigned = false;
+        for (const h of d.hoat_dong) {
+          const name = h.ten.toLowerCase();
+          if (name.includes("khám phá") || name.includes("luyện tập")) {
+            const stepWithoutCode = h.cac_buoc.find((st) => !st.ma_nls);
+            if (stepWithoutCode) {
+              stepWithoutCode.ma_nls = m;
+              assigned = true;
+              break;
+            }
+          }
+        }
+        if (!assigned && d.hoat_dong[0] && d.hoat_dong[0].cac_buoc[0]) {
+          d.hoat_dong[0].cac_buoc[0].ma_nls = m;
+        }
+      }
     });
     d.hoat_dong.forEach((h) => h.cac_buoc.forEach((s) => { if (s.ma_nls && !want.includes(bare(s.ma_nls))) delete s.ma_nls; }));
   }

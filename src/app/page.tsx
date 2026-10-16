@@ -60,16 +60,16 @@ function normalizeActor(line: string, actor: "GV" | "HS"): string {
   }
 
   const who = actor === "HS" ? "(?:HS|học sinh|các em)" : "(?:GV|giáo viên)";
-  const bare = new RegExp(`^${who}(?=\\s|$)\\s*`, "iu");
-  const counted = new RegExp(`^(?:một số|vài|\\d+\\s*[-–]\\s*\\d+|\\d+)\\s*${who}(?=\\s|$)\\s*`, "iu");
+  const sep = "[-:.,–\\s]+";
+  const bare = new RegExp(`^${who}(?:${sep}|$)`, "iu");
+  const counted = new RegExp(`^(?:một số|vài|\\d+\\s*[-–]\\s*\\d+|\\d+)\\s*${who}(?:${sep}|$)`, "iu");
 
   let prev;
   do {
     prev = s;
-    s = s.replace(counted, "").replace(bare, "");
+    s = s.replace(counted, "").replace(bare, "").trim();
+    s = s.replace(/^[-:.,–\s]+/, "").trim();
   } while (s !== prev);
-
-  s = s.trim().replace(/^[:\-–,]\s*/, "").trim();
 
   return `${marker ? marker + " " : ""}${actor} ${s}`.trim();
 }
@@ -109,7 +109,26 @@ function parsePlanForPreview(rawPlan: string) {
   let inIII = false;
   let inIV = false;
   let currentAct: PreviewActivity | null = null;
-  const hsQueue: string[] = [];
+  let currentActHsQueue: string[] = [];
+
+  const finalizeActivity = () => {
+    if (!currentAct) return;
+    if (currentActHsQueue.length > 0) {
+      let q = 0;
+      for (const st of currentAct.steps) {
+        if (!st.hs && q < currentActHsQueue.length) {
+          st.hs = currentActHsQueue[q++];
+        }
+      }
+      // Nếu có thêm bước HS mà hết bước GV
+      while (q < currentActHsQueue.length) {
+        currentAct.steps.push({ gv: "", hs: currentActHsQueue[q++] });
+      }
+    }
+    activities.push(currentAct);
+    currentAct = null;
+    currentActHsQueue = [];
+  };
 
   for (const rawLine of lines) {
     const line = rawLine.trim();
@@ -122,10 +141,7 @@ function parsePlanForPreview(rawPlan: string) {
     }
 
     if (/^IV\.\s*ĐIỀU CHỈNH/i.test(line)) {
-      if (currentAct) {
-        activities.push(currentAct);
-        currentAct = null;
-      }
+      finalizeActivity();
       inIII = false;
       inIV = true;
       afterSectionIII.push(line);
@@ -145,7 +161,7 @@ function parsePlanForPreview(rawPlan: string) {
 
       // Phát hiện tiêu đề hoạt động: 1. Khởi động..., 2. Khám phá...
       if (/^(?:[1-4]\.|\d+\.)\s*(?:Khởi động|Khám phá|Luyện tập|Vận dụng)/i.test(line)) {
-        if (currentAct) activities.push(currentAct);
+        finalizeActivity();
         const normalizedTitle = line
           .replace(/Luyện\s*tập\s*thực\s*hành/gi, "Luyện tập, thực hành")
           .replace(/Vận\s*dụng\s*trải\s*nghiệm/gi, "Vận dụng, trải nghiệm");
@@ -165,10 +181,10 @@ function parsePlanForPreview(rawPlan: string) {
           currentAct.steps.push({ gv: line, hs: "" });
         }
       } else if (isHS) {
-        hsQueue.push(line);
+        currentActHsQueue.push(line);
       } else if (currentAct && currentAct.steps.length > 0) {
-        if (hsQueue.length > 0) {
-          hsQueue[hsQueue.length - 1] += "\n" + line;
+        if (currentActHsQueue.length > 0) {
+          currentActHsQueue[currentActHsQueue.length - 1] += "\n" + line;
         } else {
           const lastStep = currentAct.steps[currentAct.steps.length - 1];
           lastStep.gv += "\n" + line;
@@ -185,19 +201,7 @@ function parsePlanForPreview(rawPlan: string) {
     beforeSectionIII.push(line);
   }
 
-  if (currentAct) activities.push(currentAct);
-
-  // Ghép các bước HS theo thứ tự vào các bước GV tương ứng
-  if (hsQueue.length > 0) {
-    let qIdx = 0;
-    for (const act of activities) {
-      for (const st of act.steps) {
-        if (!st.hs && qIdx < hsQueue.length) {
-          st.hs = hsQueue[qIdx++];
-        }
-      }
-    }
-  }
+  finalizeActivity();
 
   return { beforeSectionIII, activities, afterSectionIII };
 }

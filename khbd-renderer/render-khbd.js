@@ -118,16 +118,16 @@ function normalizeActor(line, actor) {
   }
 
   const who = actor === "HS" ? "(?:HS|học sinh|các em)" : "(?:GV|giáo viên)";
-  const bare = new RegExp(`^${who}(?=\\s|$)\\s*`, "iu");
-  const counted = new RegExp(`^(?:một số|vài|\\d+\\s*[-–]\\s*\\d+|\\d+)\\s*${who}(?=\\s|$)\\s*`, "iu");
+  const sep = "[-:.,–\\s]+";
+  const bare = new RegExp(`^${who}(?:${sep}|$)`, "iu");
+  const counted = new RegExp(`^(?:một số|vài|\\d+\\s*[-–]\\s*\\d+|\\d+)\\s*${who}(?:${sep}|$)`, "iu");
 
   let prev;
   do {
     prev = s;
-    s = s.replace(counted, "").replace(bare, "");
+    s = s.replace(counted, "").replace(bare, "").trim();
+    s = s.replace(/^[-:.,–\s]+/, "").trim();
   } while (s !== prev);
-
-  s = s.trim().replace(/^[:\-–,]\s*/, "").trim();
 
   return `${marker ? marker + " " : ""}${actor} ${s}`.trim();
 }
@@ -290,8 +290,8 @@ function buildDoc(d0, opts = {}) {
 
   body.push(
     heading("II. ĐỒ DÙNG DẠY HỌC:"),
-    dashLine(`Giáo viên: ${clean(d.do_dung_gv)}`),
-    dashLine(`Học sinh: ${clean(d.do_dung_hs)}`),
+    dashLine(`Giáo viên: ${clean(d.do_dung_gv).replace(/^(?:giáo viên|gv)\s*[-:.,–\s]*/i, "").trim()}`),
+    dashLine(`Học sinh: ${clean(d.do_dung_hs).replace(/^(?:học sinh|hs)\s*[-:.,–\s]*/i, "").trim()}`),
     heading("III. CÁC HOẠT ĐỘNG DẠY HỌC CHỦ YẾU:")
   );
 

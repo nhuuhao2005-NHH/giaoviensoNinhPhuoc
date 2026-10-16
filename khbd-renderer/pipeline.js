@@ -66,12 +66,17 @@ function rankModels(modelList) {
 async function toParts(file) {
   const name = (file.name || "").toLowerCase();
   if (name.endsWith(".docx")) {
-    const { value } = await mammoth.extractRawText({ buffer: file.buffer });
-    return [{ text: `GIÁO ÁN TẢI LÊN:\n${value}` }];
+    const raw = await mammoth.extractRawText({ buffer: file.buffer });
+    const html = await mammoth.convertToHtml({ buffer: file.buffer });
+    let textContent = raw.value || "";
+    if (html.value && html.value.includes("<table")) {
+      textContent += `\n\n--- CẤU TRÚC BẢNG BIỂU CHI TIẾT TRONG GIÁO ÁN GỐC (DẠNG HTML) ---\n${html.value}`;
+    }
+    return [{ text: `GIÁO ÁN GỐC CỦA GIÁO VIÊN TẢI LÊN:\n${textContent}` }];
   }
   if (name.endsWith(".pdf"))
-    return [{ inlineData: { data: file.buffer.toString("base64"), mimeType: "application/pdf" } }, { text: "GIÁO ÁN TẢI LÊN: tệp PDF đính kèm." }];
-  return [{ text: `GIÁO ÁN TẢI LÊN:\n${file.buffer.toString("utf8")}` }];
+    return [{ inlineData: { data: file.buffer.toString("base64"), mimeType: "application/pdf" } }, { text: "GIÁO ÁN GỐC CỦA GIÁO VIÊN TẢI LÊN (tệp PDF đính kèm)." }];
+  return [{ text: `GIÁO ÁN GỐC CỦA GIÁO VIÊN TẢI LÊN:\n${file.buffer.toString("utf8")}` }];
 }
 
 /**
@@ -98,7 +103,16 @@ async function processKhbd(file, options) {
   const selected = (options.codes || []).map((c) => c.ma);
   const selectedAi = (options.aiCodes || []).map((c) => c.ma);
 
-  const askParts = [`Môn: ${options.mon}. Tiết: ${options.tiet || "không rõ"}.`];
+  const askParts = [
+    `Môn: ${options.mon}. Tiết: ${options.tiet || "không rõ"}.`,
+    `YÊU CẦU ĐẶC BIỆT BẮT BUỘC:
+- TÔN TRỌNG TUYỆT ĐỐI NỘI DUNG CỦA GIÁO VIÊN: Giữ nguyên vẹn 100% nội dung, câu từ, diễn đạt, câu hỏi, hướng dẫn và các bước trong giáo án gốc của giáo viên.
+- TUYỆT ĐỐI KHÔNG ĐƯỢC TỰ Ý ĐIỀU CHỈNH, không tóm tắt, không rút gọn hay viết lại câu chữ của giáo viên theo ý mình.
+- Giữ nguyên đầy đủ tất cả các hoạt động, các bước, các ví dụ, bài tập mà giáo viên đã soạn.
+- Bổ sung thêm hoạt động tương ứng của học sinh (HS) nếu giáo án gốc chỉ có việc của GV để đảm bảo tính nhất quán và song hành giữa GV - HS.
+- Luôn luôn viết hoa "GV" và "HS" ở đầu mỗi câu.
+- Tên bài phải là chữ IN HOA.`,
+  ];
 
   if (options.infrastructureLevel) {
     askParts.push(`Đồ dùng và thiết bị dạy học: ${options.infrastructureLevel}`);
@@ -151,7 +165,7 @@ async function processKhbd(file, options) {
           generationConfig: {
             responseMimeType: "application/json",
             responseSchema,
-            temperature: 0.2,
+            temperature: 0.0,
           },
         });
         res = await model.generateContent(contentPayload);
