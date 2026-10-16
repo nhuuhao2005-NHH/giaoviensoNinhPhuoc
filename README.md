@@ -50,3 +50,4 @@ git commit -m "Cap nhat chuan CV 2345 va Bang ma chi bao NLS Lop 1-3"
 git push -u origin main
 ```
 Sau đó truy cập **[Vercel.com](https://vercel.com)** $\rightarrow$ Import repository $\rightarrow$ Điền biến môi trường `GEMINI_API_KEY` $\rightarrow$ Deploy để nhận link `https://[ten-du-an].vercel.app`.
+"# giaoviensoNinhPhuoc" 
