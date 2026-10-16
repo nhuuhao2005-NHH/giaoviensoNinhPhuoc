@@ -1193,8 +1193,7 @@ export default function HomePage() {
             <span className="text-indigo-600">Trí tuệ nhân tạo AI Lớp 3</span> vào Giáo án
           </h1>
           <p className="mt-2 text-sm sm:text-base text-slate-600">
-            Tự động tích hợp 52 mã chỉ báo NLS (PL CV 3456) &amp; 32 mã chỉ báo AI (PL CV 2422),
-            phân tách 2 cột: <strong>Hoạt động của giáo viên</strong> &amp; <strong>Hoạt động của học sinh</strong>.
+            Tự động tích hợp 52 mã chỉ báo NLS (PL CV 3456) &amp; 32 mã chỉ báo AI (PL CV 2422).
           </p>
         </div>
 
@@ -1459,7 +1458,7 @@ export default function HomePage() {
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5" />
-                    <span>Soạn Kế Hoạch Bài Dạy Chuẩn CV 2345</span>
+                    <span>Soạn Kế Hoạch Bài Dạy</span>
                   </>
                 )}
               </button>
@@ -1816,7 +1815,7 @@ export default function HomePage() {
                       Chưa có nội dung Kế hoạch bài dạy
                     </p>
                     <p className="text-xs text-slate-400 max-w-sm mt-1">
-                      Vui lòng chọn Môn học, tải lên file Kế hoạch bài dạy (.docx hoặc .txt) ở cột bên trái và bấm nút &quot;Soạn Kế Hoạch Bài Dạy Chuẩn CV 2345&quot;.
+                      Vui lòng chọn Môn học, tải lên file Kế hoạch bài dạy (.docx hoặc .txt) ở cột bên trái và bấm nút &quot;Soạn Kế Hoạch Bài Dạy&quot;.
                     </p>
                   </div>
                 )}
