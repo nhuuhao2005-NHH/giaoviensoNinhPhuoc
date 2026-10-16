@@ -11,14 +11,10 @@ const MAX_TRIES = 3;
 
 // Danh sách model dự phòng khi không thể truy vấn ListModels
 const FALLBACK_MODELS = [
-  "gemini-2.5-flash",
   "gemini-2.0-flash",
-  "gemini-2.0-flash-lite",
-  "gemini-1.5-flash-latest",
-  "gemini-1.5-flash-002",
-  "gemini-1.5-flash-001",
   "gemini-1.5-flash",
-  "gemini-2.5-pro",
+  "gemini-1.5-flash-8b",
+  "gemini-2.0-flash-lite-preview-02-05",
 ];
 
 // Tự động truy vấn Google AI Studio xem API Key này hỗ trợ những model nào (tránh lỗi 404 Not Found)
@@ -51,10 +47,12 @@ function rankModels(modelList) {
 
   const score = (name) => {
     const lower = name.toLowerCase();
-    if (lower.includes("2.5-flash")) return 100;
-    if (lower.includes("2.0-flash")) return 90;
+    if (lower === "gemini-2.0-flash") return 100;
+    if (lower === "gemini-1.5-flash") return 95;
+    if (lower.includes("1.5-flash-8b")) return 90;
     if (lower.includes("flash-lite")) return 85;
-    if (lower.includes("1.5-flash")) return 80;
+    if (lower.includes("2.0-flash")) return 80;
+    if (lower.includes("1.5-flash")) return 75;
     if (lower.includes("flash")) return 70;
     return 10;
   };
@@ -180,6 +178,11 @@ async function processKhbd(file, options) {
           throw new Error("Khóa Gemini API Key không hợp lệ. Vui lòng kiểm tra lại mã API trong nút 'Cài API Key'.");
         }
 
+        // Nếu gặp 429 (Too Many Requests), tạm dừng 2 giây để Google mở lại cửa sổ rate limit
+        if (errMsg.includes("429") || errMsg.includes("Quota exceeded") || errMsg.includes("RESOURCE_EXHAUSTED")) {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+
         // Tự động chuyển sang model tiếp theo trong danh sách
         continue;
       }
@@ -187,9 +190,13 @@ async function processKhbd(file, options) {
 
     if (!res) {
       const allErrorsText = attemptErrors.join("; ");
-      if (allErrorsText.includes("429") || allErrorsText.includes("Quota exceeded")) {
+      if (allErrorsText.includes("429") || allErrorsText.includes("Quota exceeded") || allErrorsText.includes("RESOURCE_EXHAUSTED")) {
         throw new Error(
-          `Hạn ngạch gọi Gemini API miễn phí (Free Tier) tạm thời hết lượt yêu cầu (429 Too Many Requests). Vui lòng thử lại sau ít phút hoặc dùng khóa API khác từ https://aistudio.google.com/.`
+          `Hạn ngạch gọi Gemini API miễn phí (Free Tier) tạm thời đạt giới hạn (429 Too Many Requests).\n` +
+          `Nguyên nhân: Google giới hạn gói Free Tier tối đa 15 yêu cầu/phút (RPM). Khi gửi yêu cầu liên tục hoặc xử lý dữ liệu lớn, Google tạm ngắt kết nối trong 60 giây.\n` +
+          `Cách khắc phục:\n` +
+          `1. Chờ 1–2 phút rồi bấm lại nút "Soạn Kế Hoạch Bài Dạy".\n` +
+          `2. Hoặc tạo thêm 1 khóa API mới từ tài khoản Google khác tại https://aistudio.google.com/ và dán vào nút 'Cài API Key'.`
         );
       }
       throw new Error(
