@@ -208,7 +208,8 @@ export const AI_STRAND_GROUPS: AIStrandGroup[] = [
 ];
 
 export const PRIMARY_EDTECH_TOOLS = [
-  { name: "SGK ĐIỆN TỬ", category: "SGK điện tử, video bài giảng, tài liệu tập huấn của Nhà xuất bản Giáo dục Việt Nam", url: "https://taphuan.nxbgd.vn" },
+  { name: "SGK ĐIỆN TỬ (NXBGD)", category: "SGK điện tử, video bài giảng, tài liệu tập huấn của Nhà xuất bản Giáo dục Việt Nam", url: "https://taphuan.nxbgd.vn" },
+  { name: "KHO HỌC LIỆU SỐ", category: "Kho học liệu số, tài nguyên bài giảng điện tử và tư liệu giảng dạy Tiểu học", url: "https://drive.google.com/drive/folders/1F1_Liu3D-MTfj3cqNbqe_ZQOdqHdjaDr?usp=drive_link" },
   { name: "Teachable Machine (Google)", category: "Công cụ AI học máy trực quan nhận diện hình ảnh/âm thanh cho HS", url: "https://teachablemachine.withgoogle.com" },
   { name: "Wordwall / Quizizz / Blooket", category: "Trò chơi học tập tương tác trực quan cho học sinh tiểu học", url: "https://wordwall.net" },
   { name: "Canva Giáo Dục / PowerPoint", category: "Thiết kế bài giảng tương tác, trò chơi lật mảnh ghép, vòng quay", url: "https://www.canva.com" },

@@ -1528,6 +1528,18 @@ export default function HomePage() {
                 >
                   Học liệu &amp; EdTech
                 </button>
+
+                {/* Tab 5: KHO HỌC LIỆU SỐ (Màu vàng nhạt) */}
+                <a
+                  href="https://drive.google.com/drive/folders/1F1_Liu3D-MTfj3cqNbqe_ZQOdqHdjaDr?usp=drive_link"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition flex items-center space-x-1.5 bg-amber-100/80 text-amber-900 border border-amber-300 hover:bg-amber-200 hover:border-amber-400"
+                  title="Mở Kho học liệu số trên Google Drive"
+                >
+                  <span>KHO HỌC LIỆU SỐ</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-amber-700" />
+                </a>
               </div>
 
               {/* ACTION BUTTONS: Chế độ xem, Sao chép & Tải Word */}
@@ -2000,25 +2012,44 @@ export default function HomePage() {
                   Học liệu số &amp; Công cụ EdTech / AI phù hợp lứa tuổi học sinh Tiểu học:
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {PRIMARY_EDTECH_TOOLS.map((tool, idx) => (
-                    <a
-                      key={idx}
-                      href={tool.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-orange-400 hover:shadow-sm transition flex flex-col justify-between group"
-                    >
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-bold text-slate-900 text-sm group-hover:text-orange-600">
-                            {tool.name}
-                          </span>
-                          <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-orange-600" />
+                  {PRIMARY_EDTECH_TOOLS.map((tool, idx) => {
+                    const isKhoHocLieu = tool.name.includes("KHO HỌC LIỆU SỐ");
+                    return (
+                      <a
+                        key={idx}
+                        href={tool.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={`p-3.5 rounded-xl border transition flex flex-col justify-between group ${
+                          isKhoHocLieu
+                            ? "bg-amber-50/90 border-amber-300 hover:border-amber-400 hover:bg-amber-100/80 shadow-xs"
+                            : "border-slate-200 bg-white hover:border-orange-400 hover:shadow-sm"
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span
+                              className={`font-bold text-sm ${
+                                isKhoHocLieu
+                                  ? "text-amber-900 group-hover:text-amber-700"
+                                  : "text-slate-900 group-hover:text-orange-600"
+                              }`}
+                            >
+                              {tool.name}
+                            </span>
+                            <ExternalLink
+                              className={`w-3.5 h-3.5 ${
+                                isKhoHocLieu
+                                  ? "text-amber-600 group-hover:text-amber-800"
+                                  : "text-slate-400 group-hover:text-orange-600"
+                              }`}
+                            />
+                          </div>
+                          <p className="text-xs text-slate-500">{tool.category}</p>
                         </div>
-                        <p className="text-xs text-slate-500">{tool.category}</p>
-                      </div>
-                    </a>
-                  ))}
+                      </a>
+                    );
+                  })}
                 </div>
               </div>
             )}
