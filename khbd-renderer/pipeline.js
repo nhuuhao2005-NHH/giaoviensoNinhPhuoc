@@ -9,11 +9,11 @@ const { renderKhbd } = require("./render-khbd");
 
 const MAX_TRIES = 3;
 
-// Danh sách model dự phòng khi không thể truy vấn ListModels
+// Danh sách model dự phòng: ưu tiên gemini-1.5-flash vì luôn có 15 RPM ổn định trên mọi tài khoản Free Tier mới
 const FALLBACK_MODELS = [
-  "gemini-2.0-flash",
   "gemini-1.5-flash",
   "gemini-1.5-flash-8b",
+  "gemini-2.0-flash",
   "gemini-2.0-flash-lite-preview-02-05",
 ];
 
@@ -40,20 +40,22 @@ async function getAvailableModels(apiKey) {
   return [];
 }
 
-// Xếp hạng: ưu tiên các model Flash có hạn ngạch Free Tier dồi dào, tránh lỗi 429 limit: 0 của bản Pro
+// Xếp hạng: ưu tiên gemini-1.5-flash vì luôn có 15 RPM ổn định trên mọi tài khoản Free Tier mới
 function rankModels(modelList) {
   const flash = modelList.filter((m) => m.toLowerCase().includes("flash"));
   const nonFlash = modelList.filter((m) => !m.toLowerCase().includes("flash"));
 
   const score = (name) => {
     const lower = name.toLowerCase();
-    if (lower === "gemini-2.0-flash") return 100;
-    if (lower === "gemini-1.5-flash") return 95;
-    if (lower.includes("1.5-flash-8b")) return 90;
-    if (lower.includes("flash-lite")) return 85;
-    if (lower.includes("2.0-flash")) return 80;
+    // gemini-1.5-flash là model chuẩn nhất cho Free Tier mọi tài khoản Google mới
+    if (lower === "gemini-1.5-flash") return 100;
+    if (lower.includes("1.5-flash-8b")) return 95;
+    if (lower === "gemini-2.0-flash") return 90;
+    if (lower.includes("2.0-flash-lite")) return 85;
+    if (lower.includes("flash-lite")) return 80;
     if (lower.includes("1.5-flash")) return 75;
-    if (lower.includes("flash")) return 70;
+    if (lower.includes("2.0-flash")) return 70;
+    if (lower.includes("flash")) return 65;
     return 10;
   };
 
@@ -178,9 +180,15 @@ async function processKhbd(file, options) {
           throw new Error("Khóa Gemini API Key không hợp lệ. Vui lòng kiểm tra lại mã API trong nút 'Cài API Key'.");
         }
 
-        // Nếu gặp 429 (Too Many Requests), tạm dừng 2 giây để Google mở lại cửa sổ rate limit
+        // Nếu gặp lỗi limit '0' (Google không cấp quota cho model này trên tài khoản mới), bỏ qua ngay lập tức
+        if (errMsg.includes("limit '0'") || errMsg.includes('limit "0"')) {
+          console.warn(`[khbd-pipeline] Model ${modelName} bị Google gán quota limit = 0 trên tài khoản này, tự động chuyển model khác.`);
+          continue;
+        }
+
+        // Nếu gặp 429 thông thường, tạm dừng 1.5 giây để Google mở lại cửa sổ rate limit
         if (errMsg.includes("429") || errMsg.includes("Quota exceeded") || errMsg.includes("RESOURCE_EXHAUSTED")) {
-          await new Promise((resolve) => setTimeout(resolve, 2000));
+          await new Promise((resolve) => setTimeout(resolve, 1500));
         }
 
         // Tự động chuyển sang model tiếp theo trong danh sách
@@ -190,13 +198,27 @@ async function processKhbd(file, options) {
 
     if (!res) {
       const allErrorsText = attemptErrors.join("; ");
-      if (allErrorsText.includes("429") || allErrorsText.includes("Quota exceeded") || allErrorsText.includes("RESOURCE_EXHAUSTED")) {
+      const isQuotaError =
+        allErrorsText.includes("429") ||
+        allErrorsText.includes("Quota exceeded") ||
+        allErrorsText.includes("RESOURCE_EXHAUSTED");
+      const hasLimitZero =
+        allErrorsText.includes("limit '0'") || allErrorsText.includes('limit "0"');
+
+      if (isQuotaError) {
+        let note = "";
+        if (hasLimitZero) {
+          note = `\n• Lưu ý: Google thường gán hạn ngạch = 0 cho model gemini-2.0-flash đối với tài khoản mới. Hệ thống đã tự động chuyển sang gemini-1.5-flash.`;
+        }
         throw new Error(
           `Hạn ngạch gọi Gemini API miễn phí (Free Tier) tạm thời đạt giới hạn (429 Too Many Requests).\n` +
-          `Nguyên nhân: Google giới hạn gói Free Tier tối đa 15 yêu cầu/phút (RPM). Khi gửi yêu cầu liên tục hoặc xử lý dữ liệu lớn, Google tạm ngắt kết nối trong 60 giây.\n` +
+          `Nguyên nhân chính:\n` +
+          `1. Địa chỉ IP mạng Internet (Wi-Fi trường học/cơ quan/nhà) vừa gửi nhiều yêu cầu liên tiếp, Google tạm ngắt kết nối trong 1–2 phút.\n` +
+          `2. Trình duyệt chưa lưu khóa API mới (vui lòng bấm nút 'Cài API Key' màu vàng để kiểm tra và bấm 'Lưu khóa API').\n` +
+          `3. Khóa API mới tạo trên AI Studio cần 1–2 phút để Google kích hoạt trên hệ thống toàn cầu.${note}\n\n` +
           `Cách khắc phục:\n` +
-          `1. Chờ 1–2 phút rồi bấm lại nút "Soạn Kế Hoạch Bài Dạy".\n` +
-          `2. Hoặc tạo thêm 1 khóa API mới từ tài khoản Google khác tại https://aistudio.google.com/ và dán vào nút 'Cài API Key'.`
+          `• Chờ 1–2 phút rồi bấm lại nút "Soạn Kế Hoạch Bài Dạy".\n` +
+          `• Phản hồi chi tiết từ Google: ${attemptErrors.slice(-2).join(" | ")}`
         );
       }
       throw new Error(
