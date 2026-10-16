@@ -1528,18 +1528,6 @@ export default function HomePage() {
                 >
                   Học liệu &amp; EdTech
                 </button>
-
-                {/* Tab 5: KHO HỌC LIỆU SỐ (Màu vàng nhạt) */}
-                <a
-                  href="https://drive.google.com/drive/folders/1F1_Liu3D-MTfj3cqNbqe_ZQOdqHdjaDr?usp=drive_link"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition flex items-center space-x-1.5 bg-amber-100/80 text-amber-900 border border-amber-300 hover:bg-amber-200 hover:border-amber-400"
-                  title="Mở Kho học liệu số trên Google Drive"
-                >
-                  <span>KHO HỌC LIỆU SỐ</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-amber-700" />
-                </a>
               </div>
 
               {/* ACTION BUTTONS: Chế độ xem, Sao chép & Tải Word */}
