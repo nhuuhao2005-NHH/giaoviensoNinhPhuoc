@@ -161,6 +161,7 @@ async function processKhbd(file, options) {
 
     for (const modelName of modelsToTry) {
       try {
+        console.log(`[khbd-pipeline] Đang gọi mô hình AI: ${modelName}`);
         const model = genAI.getGenerativeModel({
           model: modelName,
           systemInstruction,
@@ -173,6 +174,7 @@ async function processKhbd(file, options) {
         });
         res = await model.generateContent(contentPayload);
         activeModelIndex = modelsToUse.indexOf(modelName);
+        console.log(`[khbd-pipeline] Mô hình ${modelName} đã xử lý thành công!`);
         break; // Thành công
       } catch (err) {
         lastError = err;
