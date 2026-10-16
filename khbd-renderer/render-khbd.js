@@ -219,22 +219,22 @@ const B = { style: BorderStyle.SINGLE, size: 6, color: "000000" };
 const NONE = { style: BorderStyle.NONE, size: 0, color: "auto" };
 const BORDERS = { top: B, bottom: B, left: B, right: B };
 
-// Chuẩn hóa tên bài: xóa chữ "Bài" / "BÀI" bị lặp ở đầu chuỗi (ví dụ: "Bài Bài 1:...", "Bài Bài:...")
+// Chuẩn hóa tên bài: tất cả tên bài phải là chữ in hoa, xóa chữ "Bài" / "BÀI" bị lặp ở đầu chuỗi (ví dụ: "Bài Bài 1:...", "Bài Bài:...")
 function formatLessonTitle(raw) {
   let s = clean(raw).trim();
   if (!s) return "BÀI: …";
 
   // Xóa mọi từ "Bài" / "BÀI" bị lặp ở đầu chuỗi
-  s = s.replace(/^(?:bài\s*)+/iu, "").trim();
+  s = s.replace(/^(?:bài\s*)+/i, "").trim();
 
   if (s.startsWith(":")) {
     const rest = s.replace(/^:\s*/, "").trim();
-    return rest ? `BÀI: ${rest}` : "BÀI: …";
+    return rest ? `BÀI: ${rest.toUpperCase()}` : "BÀI: …";
   }
   if (/^\d+/.test(s)) {
-    return `BÀI ${s}`.trim();
+    return `BÀI ${s.toUpperCase()}`.trim();
   }
-  return `BÀI: ${s}`.trim();
+  return `BÀI: ${s.toUpperCase()}`.trim();
 }
 const cell = (children, o = {}) =>
   new TableCell({
@@ -309,17 +309,17 @@ function buildDoc(d0, opts = {}) {
     const tg = thoiGian(h, ten);
     const titleText = `${hIdx + 1}. ${ten}: ${tg}`;
 
-    // 1. Hàng tiêu đề hoạt động: 1 hàng bảng gộp 2 cột, viền CHỈ 2 BÊN (trái & phải)
-    const titleCell = new TableCell({
-      columnSpan: 2,
-      width: { size: COL_W * 2, type: WidthType.DXA },
+    // 1. Hàng tiêu đề hoạt động: 1 hàng bảng riêng biệt (TableRow), tuyệt đối không gộp 2 cột của bảng
+    // Viền chỉ 2 bên: left: SINGLE (size 6), right: SINGLE (size 6), top: NONE, bottom: NONE. Ở giữa: SINGLE (size 6).
+    const titleCellGv = new TableCell({
+      width: { size: COL_W, type: WidthType.DXA },
       borders: {
         top: NONE,
         bottom: NONE,
         left: B,
         right: B,
       },
-      margins: { top: 100, bottom: 60, left: 100, right: 100 },
+      margins: { top: 80, bottom: 60, left: 100, right: 100 },
       children: [
         new Paragraph({
           spacing: { line: 276, lineRule: LineRuleType.EXACTLY, before: 0, after: 0 },
@@ -327,8 +327,21 @@ function buildDoc(d0, opts = {}) {
         }),
       ],
     });
-    tableRows.push(new TableRow({ children: [titleCell] }));
-    console.log(`[Hoạt động ${hIdx + 1}] "${titleText}": Đã tạo hàng bảng tiêu đề (viền chỉ 2 bên)`);
+
+    const titleCellHs = new TableCell({
+      width: { size: COL_W, type: WidthType.DXA },
+      borders: {
+        top: NONE,
+        bottom: NONE,
+        left: B,
+        right: B,
+      },
+      margins: { top: 80, bottom: 60, left: 100, right: 100 },
+      children: [empty()],
+    });
+
+    tableRows.push(new TableRow({ children: [titleCellGv, titleCellHs] }));
+    console.log(`[Hoạt động ${hIdx + 1}] "${titleText}": Đã tạo hàng bảng tiêu đề 2 ô riêng biệt (không gộp cột, viền 2 bên & ở giữa)`);
 
     // 2. Hàng nội dung của hoạt động: 2 ô (GV và HS)
     const gvChildren = [];

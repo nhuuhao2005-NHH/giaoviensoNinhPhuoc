@@ -93,12 +93,12 @@ function formatLessonTitle(raw: string): string {
 
   if (s.startsWith(":")) {
     const rest = s.replace(/^:\s*/, "").trim();
-    return rest ? `BÀI: ${rest}` : "BÀI: …";
+    return rest ? `BÀI: ${rest.toUpperCase()}` : "BÀI: …";
   }
   if (/^\d+/.test(s)) {
-    return `BÀI ${s}`.trim();
+    return `BÀI ${s.toUpperCase()}`.trim();
   }
-  return `BÀI: ${s}`.trim();
+  return `BÀI: ${s.toUpperCase()}`.trim();
 }
 
 function parsePlanForPreview(rawPlan: string) {
@@ -1581,13 +1581,13 @@ export default function HomePage() {
                                     {parsedPreview.activities.map((act, aIdx) => {
                                       return (
                                         <React.Fragment key={aIdx}>
-                                          {/* Hàng tiêu đề hoạt động: 1 hàng bảng gộp 2 cột, viền CHỈ 2 BÊN (trái & phải) */}
+                                          {/* Hàng tiêu đề hoạt động: 2 ô riêng biệt (tuyệt đối không gộp cột), viền 2 bên và ở giữa */}
                                           <tr className="border-l border-r border-slate-300 border-t-0 border-b-0 bg-white">
-                                            <td
-                                              colSpan={2}
-                                              className="p-2.5 font-bold text-slate-900 leading-relaxed text-xs border-l border-r border-slate-300 border-t-0 border-b-0"
-                                            >
+                                            <td className="w-1/2 p-2.5 font-bold text-slate-900 leading-relaxed text-xs border-r border-slate-300 border-t-0 border-b-0">
                                               {act.title}
+                                            </td>
+                                            <td className="w-1/2 p-2.5 border-t-0 border-b-0 select-none">
+                                              &nbsp;
                                             </td>
                                           </tr>
                                           {/* Hàng nội dung hoạt động: 2 cột GV và HS song hành */}
