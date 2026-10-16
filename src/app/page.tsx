@@ -43,9 +43,43 @@ interface PreviewActivity {
   steps: PreviewStep[];
 }
 
-function ensureDash(text: string): string {
-  const t = (text || "").trim();
+function normalizeActor(line: string, actor: "GV" | "HS"): string {
+  let s = (line || "").trim();
+  if (!s) return "";
+
+  // Xử lý lỗi khoảng trắng đôi và dấu chấm đôi '..'
+  s = s.replace(/[ \t]+/g, " ");
+  s = s.replace(/\.{4,}/g, "...").replace(/(?<!\.)\.\.(?!\.)/g, ".");
+
+  // Lưu rồi xóa ký hiệu '-' / '+' đầu câu (kể cả lặp: '- -', '+ -', '- +')
+  const markerMatch = s.match(/^[-+\s]+/);
+  let marker = "";
+  if (markerMatch && /[-+]/.test(markerMatch[0])) {
+    marker = markerMatch[0].includes("-") ? "-" : "+";
+    s = s.replace(/^[-+\s]+/, "");
+  }
+
+  const who = actor === "HS" ? "(?:HS|học sinh|các em)" : "(?:GV|giáo viên)";
+  const bare = new RegExp(`^${who}(?=\\s|$)\\s*`, "iu");
+  const counted = new RegExp(`^(?:một số|vài|\\d+\\s*[-–]\\s*\\d+|\\d+)\\s*${who}(?=\\s|$)\\s*`, "iu");
+
+  let prev;
+  do {
+    prev = s;
+    s = s.replace(counted, "").replace(bare, "");
+  } while (s !== prev);
+
+  s = s.trim().replace(/^[:\-–,]\s*/, "").trim();
+
+  return `${marker ? marker + " " : ""}${actor} ${s}`.trim();
+}
+
+function ensureDash(text: string, actor?: "GV" | "HS"): string {
+  let t = (text || "").trim();
   if (!t) return "";
+  if (actor) {
+    t = normalizeActor(t, actor);
+  }
   if (t.startsWith("-")) return t;
   return `- ${t}`;
 }
@@ -1542,7 +1576,7 @@ export default function HomePage() {
                                                 return (
                                                   <React.Fragment key={sIdx}>
                                                     <p className="text-slate-800 leading-relaxed text-xs whitespace-pre-line m-0 p-0 text-justify">
-                                                      {ensureDash(st.gv)}
+                                                      {ensureDash(st.gv, "GV")}
                                                     </p>
                                                     {Array.from({ length: gvExtra }).map((_, i) => (
                                                       <p key={i} className="leading-relaxed text-xs m-0 p-0 select-none">&nbsp;</p>
@@ -1575,7 +1609,7 @@ export default function HomePage() {
                                                 return (
                                                   <React.Fragment key={sIdx}>
                                                     <p className="text-slate-800 leading-relaxed text-xs whitespace-pre-line m-0 p-0 text-justify">
-                                                      {ensureDash(st.hs)}
+                                                      {ensureDash(st.hs, "HS")}
                                                     </p>
                                                     {Array.from({ length: hsExtra }).map((_, i) => (
                                                       <p key={i} className="leading-relaxed text-xs m-0 p-0 select-none">&nbsp;</p>

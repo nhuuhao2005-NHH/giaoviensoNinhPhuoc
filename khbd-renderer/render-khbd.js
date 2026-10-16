@@ -2,8 +2,11 @@
 // Cài: npm i docx
 const {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-  AlignmentType, WidthType, BorderStyle, VerticalAlign, TabStopType, LeaderType,
+  AlignmentType, WidthType, BorderStyle, VerticalAlign, TabStopType, LeaderType, LineRuleType,
 } = require("docx");
+const fs = require("fs");
+const path = require("path");
+const opentype = require("opentype.js");
 
 // ---- Thông số lấy từ KHBD_MAU.docx: A4, Times New Roman 14pt, lề T/B 2cm, trái 3cm, phải 1.5cm
 const FONT = "Times New Roman";
@@ -14,6 +17,120 @@ const PAGE = {
 };
 const CONTENT_W = PAGE.size.width - PAGE.margin.left - PAGE.margin.right; // 9356
 const COL_W = Math.floor(CONTENT_W / 2);
+
+// ---- Tải phông từ KHBD_MAU.docx (Times New Roman; nếu máy chủ không có thì Liberation Serif)
+function loadFont(isBold = false) {
+  const filename = isBold ? "timesbd.ttf" : "times.ttf";
+  const libFilename = isBold ? "LiberationSerif-Bold.ttf" : "LiberationSerif-Regular.ttf";
+
+  // 1. Thư mục fonts/ trong khbd-renderer
+  const localP = path.join(__dirname, "fonts", filename);
+  if (fs.existsSync(localP)) {
+    try {
+      const buf = fs.readFileSync(localP);
+      return opentype.parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+    } catch {}
+  }
+
+  // 2. Windows Fonts
+  const winP = path.join(process.env.WINDIR || "C:\\Windows", "Fonts", filename);
+  if (fs.existsSync(winP)) {
+    try {
+      const buf = fs.readFileSync(winP);
+      return opentype.parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+    } catch {}
+  }
+
+  // 3. Liberation Serif trên Linux/Server
+  const linuxPaths = [
+    path.join(__dirname, "fonts", libFilename),
+    "/usr/share/fonts/truetype/liberation/" + libFilename,
+    "/usr/share/fonts/liberation-serif/" + libFilename,
+    "/usr/share/fonts/truetype/liberation2/" + libFilename,
+    "/usr/local/share/fonts/" + libFilename,
+  ];
+  for (const lp of linuxPaths) {
+    if (fs.existsSync(lp)) {
+      try {
+        const buf = fs.readFileSync(lp);
+        return opentype.parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+      } catch {}
+    }
+  }
+
+  return null;
+}
+
+const regularFont = loadFont(false);
+const boldFont = loadFont(true) || regularFont;
+
+// Đo số dòng chữ thật: chiều rộng ô (4678 dxa) trừ lề trong (100 + 100 dxa), trừ hao 2% chiều rộng
+const CELL_PADDING_DXA = 100 + 100;
+const INNER_W_PT = (COL_W - CELL_PADDING_DXA) / 20; // 223.9 pt
+const MAX_W_PT = INNER_W_PT * 0.98; // 219.422 pt
+
+function measureLines(text, font = regularFont, fontSizePt = 14, maxWidthPt = MAX_W_PT) {
+  const str = String(text ?? "").trim();
+  if (!str) return 1;
+  const hardLines = str.split("\n");
+  let totalLines = 0;
+
+  for (const hardLine of hardLines) {
+    const trimmed = hardLine.trim();
+    if (!trimmed) {
+      totalLines += 1;
+      continue;
+    }
+    const words = trimmed.split(/\s+/);
+    let curW = 0;
+    let lines = 1;
+
+    for (let i = 0; i < words.length; i++) {
+      const wStr = (i === 0 ? "" : " ") + words[i];
+      const wWidth = font ? font.getAdvanceWidth(wStr, fontSizePt) : wStr.length * (fontSizePt * 0.52);
+      if (curW + wWidth <= maxWidthPt) {
+        curW += wWidth;
+      } else {
+        lines++;
+        curW = font ? font.getAdvanceWidth(words[i], fontSizePt) : words[i].length * (fontSizePt * 0.52);
+      }
+    }
+    totalLines += lines;
+  }
+  return Math.max(1, totalLines);
+}
+
+// ---- VIỆC 1: Chuẩn hóa lặp chủ thể (chạy trước Việc 2)
+function normalizeActor(line, actor) {
+  let s = String(line ?? "").trim();
+  if (!s) return "";
+
+  // Xử lý lỗi khoảng trắng đôi và dấu chấm đôi '..'
+  s = s.replace(/[ \t]+/g, " ");
+  s = s.replace(/\.{4,}/g, "...").replace(/(?<!\.)\.\.(?!\.)/g, ".");
+
+  // Lưu rồi xóa ký hiệu '-' / '+' đầu câu (kể cả lặp: '- -', '+ -', '- +')
+  const markerMatch = s.match(/^[-+\s]+/);
+  let marker = "";
+  if (markerMatch && /[-+]/.test(markerMatch[0])) {
+    marker = markerMatch[0].includes("-") ? "-" : "+";
+    s = s.replace(/^[-+\s]+/, "");
+  }
+
+  const who = actor === "HS" ? "(?:HS|học sinh|các em)" : "(?:GV|giáo viên)";
+  const bare = new RegExp(`^${who}(?=\\s|$)\\s*`, "iu");
+  const counted = new RegExp(`^(?:một số|vài|\\d+\\s*[-–]\\s*\\d+|\\d+)\\s*${who}(?=\\s|$)\\s*`, "iu");
+
+  let prev;
+  do {
+    prev = s;
+    s = s.replace(counted, "").replace(bare, "");
+  } while (s !== prev);
+
+  s = s.trim().replace(/^[:\-–,]\s*/, "").trim();
+
+  return `${marker ? marker + " " : ""}${actor} ${s}`.trim();
+}
 
 // ---- Làm sạch văn bản do LLM trả về (chặn markdown, gạch đầu dòng thừa, lời chào…)
 function clean(s) {
@@ -56,51 +173,38 @@ function steps(h) {
   return st
     .map((x) => {
       const ma = x.ma_nls ? bareCode(x.ma_nls) : "";
-      const gv = withRole("GV", inlineCodes(noLabel(clean(x.gv)))) + (ma ? ` (${ma})` : "");
-      return { gv: clean(x.gv) ? gv : "", hs: withRole("HS", inlineCodes(noLabel(clean(x.hs)))) };
+      const rawGv = inlineCodes(noLabel(clean(x.gv))) + (ma ? ` (${ma})` : "");
+      const rawHs = inlineCodes(noLabel(clean(x.hs)));
+      const gv = clean(x.gv) ? normalizeActor(rawGv, "GV") : "";
+      const hs = clean(x.hs) ? normalizeActor(rawHs, "HS") : "";
+      return { gv, hs };
     })
     .filter((x) => x.gv || x.hs);
 }
 
-// ---- Các khối dựng sẵn (Spacing Paragraph trước và sau cố định là 0)
+// ---- Các khối dựng sẵn (Spacing Paragraph trước và sau cố định là 0, giãn dòng cố định Exactly)
 const run = (text, o = {}) => new TextRun({ text, font: FONT, size: SIZE, ...o });
 const para = (children, o = {}) =>
-  new Paragraph({ spacing: { line: 276, before: 0, after: 0 }, children, ...o });
+  new Paragraph({ spacing: { line: 276, lineRule: LineRuleType.EXACTLY, before: 0, after: 0 }, children, ...o });
 const center = (text, o = {}) =>
   para([run(text, o)], { alignment: AlignmentType.CENTER });
-const heading = (text) => para([run(text, { bold: true })], { spacing: { line: 276, before: 0, after: 0 } });
+const heading = (text) => para([run(text, { bold: true })], { spacing: { line: 276, lineRule: LineRuleType.EXACTLY, before: 0, after: 0 } });
 const dashLine = (text, o = {}) => {
-  const t = clean(text);
+  const t = String(text ?? "").trim();
   if (!t) return null;
+  const content = t.replace(/^[-+]\s*/, "");
   return new Paragraph({
-    spacing: { line: 276, before: 0, after: 0 },
+    spacing: { line: 276, lineRule: LineRuleType.EXACTLY, before: 0, after: 0 },
     alignment: AlignmentType.JUSTIFIED,
-    children: [run(`- ${t}`)],
+    children: [run(`- ${content}`)],
     ...o,
   });
 };
 const empty = () =>
   new Paragraph({
-    spacing: { line: 276, before: 0, after: 0 },
+    spacing: { line: 276, lineRule: LineRuleType.EXACTLY, before: 0, after: 0 },
     children: [run("")],
   });
-
-function countLines(text) {
-  const str = String(text ?? "").trim();
-  if (!str) return 1;
-  const lines = str.split("\n");
-  let total = 0;
-  for (const line of lines) {
-    const l = line.trim();
-    if (!l) {
-      total += 1;
-    } else {
-      const effectiveLen = l.startsWith("-") ? l.length : l.length + 2;
-      total += Math.max(1, Math.ceil(effectiveLen / 41));
-    }
-  }
-  return Math.max(1, total);
-}
 
 function normalizeActivityName(raw) {
   let name = clean(raw).replace(/^\d+[.)]\s*/, "");
@@ -179,11 +283,13 @@ function buildDoc(d0, opts = {}) {
   const gvChildren = [];
   const hsChildren = [];
 
+  console.log("=== BẮT ĐẦU CĂN HÀNG BẢNG 2 CỘT KHBD BẰNG ĐOẠN TRỐNG ===");
+
   hds.forEach((h, hIdx) => {
     const ten = normalizeActivityName(h.ten);
     const tg = thoiGian(h, ten);
     const titleText = `${hIdx + 1}. ${ten}: ${tg}`;
-    const titleLines = countLines(titleText);
+    const n_title = measureLines(titleText, boldFont, 14, MAX_W_PT);
 
     // Cách 1 dòng trống (Enter) giữa các hoạt động
     if (hIdx > 0) {
@@ -194,39 +300,48 @@ function buildDoc(d0, opts = {}) {
     // Tiêu đề hoạt động GV (In đậm, spacing trước/sau = 0)
     gvChildren.push(
       new Paragraph({
-        spacing: { line: 276, before: 0, after: 0 },
+        spacing: { line: 276, lineRule: LineRuleType.EXACTLY, before: 0, after: 0 },
         children: [run(titleText, { bold: true })],
       })
     );
 
-    // Dùng phím xuống dòng (Enter) tương ứng bên HS để các bước bên dưới song hành ngang hàng
-    for (let k = 0; k < titleLines; k++) {
+    // Bù đoạn trống vào ĐẦU ô HS bằng số dòng của tiêu đề
+    for (let k = 0; k < n_title; k++) {
       hsChildren.push(empty());
     }
+    console.log(`[Hoạt động ${hIdx + 1}] "${titleText}": n_title=${n_title} -> bù ${n_title} đoạn trống vào ĐẦU ô HS`);
 
-    // Từng bước song hành giữa GV và HS
-    steps(h).forEach((st) => {
-      const gvText = clean(st.gv);
-      const hsText = clean(st.hs);
+    // Từng cặp câu song hành giữa GV và HS
+    steps(h).forEach((st, sIdx) => {
+      // Chuẩn hóa ở Việc 1 phải xong trước khi đo
+      const gvText = normalizeActor(st.gv, "GV");
+      const hsText = normalizeActor(st.hs, "HS");
 
-      const gvLines = countLines(gvText);
-      const hsLines = countLines(hsText);
+      const dashGv = gvText.startsWith("-") ? gvText : `- ${gvText}`;
+      const dashHs = hsText.startsWith("-") ? hsText : `- ${hsText}`;
 
-      // Thêm dòng gạch đầu dòng của GV và HS (spacing trước/sau = 0)
-      gvChildren.push(dashLine(gvText));
-      hsChildren.push(dashLine(hsText));
+      // Đo số dòng chữ thật
+      const n_gv = measureLines(dashGv, regularFont, 14, MAX_W_PT);
+      const n_hs = measureLines(dashHs, regularFont, 14, MAX_W_PT);
 
-      // Dùng phím xuống dòng (Enter) để điều chỉnh các hoạt động tiếp theo ngang hàng nhau
-      if (gvLines > hsLines) {
-        const diff = gvLines - hsLines;
+      // Thêm dòng gạch đầu dòng của GV và HS
+      gvChildren.push(dashLine(dashGv));
+      hsChildren.push(dashLine(dashHs));
+
+      // Bên nào ít hơn thì thêm |n_gv - n_hs| đoạn trống ngay SAU câu đó, rồi mới sang cặp kế tiếp
+      const diff = Math.abs(n_gv - n_hs);
+      if (n_gv > n_hs) {
         for (let k = 0; k < diff; k++) {
           hsChildren.push(empty());
         }
-      } else if (hsLines > gvLines) {
-        const diff = hsLines - gvLines;
+        console.log(`  [Cặp ${sIdx + 1}] n_gv=${n_gv}, n_hs=${n_hs} -> bù ${diff} đoạn trống vào HS`);
+      } else if (n_hs > n_gv) {
         for (let k = 0; k < diff; k++) {
           gvChildren.push(empty());
         }
+        console.log(`  [Cặp ${sIdx + 1}] n_gv=${n_gv}, n_hs=${n_hs} -> bù ${diff} đoạn trống vào GV`);
+      } else {
+        console.log(`  [Cặp ${sIdx + 1}] n_gv=${n_gv}, n_hs=${n_hs} -> cân bằng (0 đoạn trống)`);
       }
     });
   });
@@ -302,4 +417,4 @@ function buildDoc(d0, opts = {}) {
 async function renderKhbd(data, opts = {}) {
   return Packer.toBuffer(buildDoc(data, opts)); // Buffer .docx
 }
-module.exports = { renderKhbd, clean };
+module.exports = { renderKhbd, clean, normalizeActor, measureLines };
