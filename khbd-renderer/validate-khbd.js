@@ -1,12 +1,18 @@
 // validate-khbd.js — Kiểm tra & chuẩn hoá JSON của Gemini trước khi dựng Word.
 // Trả { data, errors }: errors là các lỗi KHÔNG tự sửa được -> nên gọi lại Gemini kèm danh sách lỗi.
 const { clean, formatLessonTitle } = require("./render-khbd");
+const {
+  resolveAIPlan,
+  generateDefaultAIBlock,
+  generateDefaultAIHsBlock,
+  normalizeAIBlock,
+} = require("./ai-rules");
 
 const TOTAL_MINUTES = 35; // một tiết tiểu học; đổi nếu trường khác
 const KHOI_DONG = /kh[ởo]i\s*đ[ộo]ng/i;
 const bare = (m) => clean(m).replace(/[\[\]()]/g, "").replace(/^Mã\s*/i, "").trim();
 
-function validateKhbd(raw, selectedCodes = [], selectedAiCodes = []) {
+function validateKhbd(raw, selectedCodes = [], selectedAiCodes = [], aiPlan = null) {
   const errors = [];
   const d = JSON.parse(JSON.stringify(raw || {}));
   const want = selectedCodes.map(bare).filter(Boolean);
@@ -83,9 +89,56 @@ function validateKhbd(raw, selectedCodes = [], selectedAiCodes = []) {
   // 4. Mã Trí tuệ nhân tạo (AI): chuẩn hóa & lọc đúng mã đã chọn nếu có
   d.tich_hop_ai = (d.tich_hop_ai || []).map((x) => ({ ma: bare(x.ma), noi_dung: clean(x.noi_dung) }));
   if (wantAi.length) {
+    const gotAi = d.tich_hop_ai.map((x) => x.ma);
     d.tich_hop_ai = d.tich_hop_ai.filter((x) => wantAi.includes(x.ma));
+    wantAi.forEach((m) => {
+      if (!gotAi.includes(m)) {
+        d.tich_hop_ai.push({ ma: m, noi_dung: "" });
+      }
+    });
+
+    // Chuẩn bị plan AI nếu chưa truyền vào
+    const activePlan = aiPlan || resolveAIPlan("Tivi/máy chiếu", wantAi);
+
+    // Tìm xem trong hoat_dong đã có bước Tích hợp AI chưa
+    let foundAIStep = false;
+    for (const h of d.hoat_dong) {
+      for (const st of h.cac_buoc) {
+        const gvText = String(st.gv || "");
+        if (gvText.includes("*Tích hợp AI:") || /tích hợp\s*(?:trí tuệ nhân tạo\s*)?ai/i.test(gvText)) {
+          foundAIStep = true;
+          const normalized = normalizeAIBlock(st.gv, st.hs, activePlan);
+          st.gv = normalized.gv;
+          st.hs = normalized.hs;
+          break;
+        }
+      }
+      if (foundAIStep) break;
+    }
+
+    // Nếu chưa có khối Tích hợp AI, tự động bổ sung vào cuối Khám phá hoặc Luyện tập
+    if (!foundAIStep && d.hoat_dong.length > 0) {
+      let targetAct = d.hoat_dong.find((h) => h.ten.toLowerCase().includes("khám phá"));
+      if (!targetAct) {
+        targetAct = d.hoat_dong.find((h) => h.ten.toLowerCase().includes("luyện tập"));
+      }
+      if (!targetAct) {
+        targetAct = d.hoat_dong.find((h) => h.ten.toLowerCase().includes("vận dụng"));
+      }
+      if (!targetAct) {
+        targetAct = d.hoat_dong[d.hoat_dong.length - 1];
+      }
+
+      if (targetAct && Array.isArray(targetAct.cac_buoc)) {
+        targetAct.cac_buoc.push({
+          gv: generateDefaultAIBlock(activePlan),
+          hs: generateDefaultAIHsBlock(activePlan),
+        });
+      }
+    }
   }
 
   return { data: d, errors };
 }
 module.exports = { validateKhbd, TOTAL_MINUTES };
+

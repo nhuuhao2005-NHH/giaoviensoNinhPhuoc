@@ -70,10 +70,20 @@ NGUYÊN TẮC BẮT BUỘC SỐ 1: TÔN TRỌNG TUYỆT ĐỐI 100% NỘI DUNG C
 - thoi_gian_phut: Khởi động luôn là 5; các hoạt động còn lại là số nguyên cố định (tổng các hoạt động bằng 35 phút).
 - tiet: Ghi số tiết nếu giáo án gốc có ghi rõ; không rõ thì để trống.
 
-4. TÍCH HỢP NĂNG LỰC SỐ VÀ AI:
+4. TÍCH HỢP NĂNG LỰC SỐ VÀ TRÍ TUỆ NHÂN TẠO (AI):
 - Việc tích hợp chỉ là BỔ SUNG THÊM một cách tự nhiên, nhẹ nhàng vào bước thích hợp.
 - TUYỆT ĐỐI KHÔNG ĐƯỢC THAY THẾ, KHÔNG LÀM MẤT HOẶC BIẾN ĐỔI BẤT KỲ NỘI DUNG DẠY HỌC GỐC NÀO CỦA BÀI.
-- Ghi mã trần (ví dụ 4.1.CB1a) vào trường "ma_nls" của bước đó. Không viết nhãn "Liên hệ" trong lời thoại. Chỉ tích hợp đúng các mã người dùng chọn.
+- NĂNG LỰC SỐ: Ghi mã trần (ví dụ 4.1.CB1a) vào trường "ma_nls" của bước đó. Không viết nhãn "Liên hệ" trong lời thoại. Chỉ tích hợp đúng các mã người dùng chọn.
+- TRÍ TUỆ NHÂN TẠO (AI): Khi có yêu cầu tích hợp AI, tạo một bước riêng chèn vào CUỐI hoạt động "Khám phá" hoặc CUỐI "Luyện tập, thực hành" (hoặc "Vận dụng, trải nghiệm").
+  + Trường "gv" của bước đó bắt buộc hiển thị đúng định dạng:
+    *Tích hợp AI:
+    - <GV làm gì theo hoạt động chính đã xác định>
+    - <GV làm gì tiếp theo / hoạt động chốt ĐK4 / HS tự làm>
+    - GV liên hệ giáo dục: <1–2 câu liên hệ đạo đức, an toàn, tư duy độc lập>
+  + Trường "hs" tương ứng có các hành động tương tác song hành của học sinh.
+  + Dòng đầu tiên của trường "gv" đúng từng ký tự: "*Tích hợp AI:"
+  + Dòng cuối cùng của trường "gv" bắt đầu bằng: "- GV liên hệ giáo dục: "
+  + Tuyệt đối không ghi mã như "1D", "3.A1.1" bên trong lời văn của khối này.
 
 5. ĐẦU RA:
 - Chỉ trả về chuỗi JSON đúng cấu trúc schema. Tuyệt đối không thêm bất kỳ văn bản ngoài JSON nào.`;

@@ -50,6 +50,46 @@ function ensureDash(text: string): string {
   return `- ${content}`;
 }
 
+function renderStepContent(text: string) {
+  const t = (text || "").trim();
+  if (!t) return null;
+
+  if (t.includes("*Tích hợp AI:") || /tích hợp\s*(?:trí tuệ nhân tạo\s*)?ai/i.test(t)) {
+    const lines = t.split("\n").map((l) => l.trim()).filter(Boolean);
+    return (
+      <div className="space-y-1 my-1 p-2 bg-indigo-50/50 border border-indigo-200 rounded-lg text-left">
+        {lines.map((line, idx) => {
+          if (line.startsWith("*Tích hợp AI:") || line.toLowerCase().startsWith("tích hợp ai")) {
+            return (
+              <p key={idx} className="font-bold italic text-indigo-800 text-xs m-0 p-0">
+                *Tích hợp AI:
+              </p>
+            );
+          }
+          if (line.includes("GV liên hệ giáo dục:") || line.includes("liên hệ giáo dục:")) {
+            return (
+              <p key={idx} className="italic text-indigo-900 font-medium text-xs m-0 p-0 pl-1.5">
+                - {line.replace(/^[-+•*]\s*/, "")}
+              </p>
+            );
+          }
+          return (
+            <p key={idx} className="text-slate-800 text-xs m-0 p-0 pl-1.5">
+              - {line.replace(/^[-+•*]\s*/, "")}
+            </p>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <p className="text-slate-800 leading-relaxed text-xs whitespace-pre-line m-0 p-0 text-justify">
+      {ensureDash(t)}
+    </p>
+  );
+}
+
 function formatLessonTitle(raw: string): string {
   let s = (raw || "").trim();
   if (!s) return "BÀI: …";
@@ -183,7 +223,9 @@ function parsePlanForPreview(rawPlan: string, htmlPlan?: string) {
         continue;
       }
 
+      const isAIHeader = /^\*?\s*Tích hợp\s*(?:Trí tuệ nhân tạo\s*)?AI/i.test(line);
       const isGV =
+        isAIHeader ||
         /^(?:[-+•]\s*)?GV\b/i.test(line) ||
         /^[-+•]?\s*Hoạt động của giáo viên/i.test(line);
       const isHS =
@@ -1623,9 +1665,7 @@ export default function HomePage() {
                                                 const gvExtra = hsLines > gvLines ? hsLines - gvLines : 0;
                                                 return (
                                                   <React.Fragment key={sIdx}>
-                                                    <p className="text-slate-800 leading-relaxed text-xs whitespace-pre-line m-0 p-0 text-justify">
-                                                      {ensureDash(st.gv)}
-                                                    </p>
+                                                    {renderStepContent(st.gv)}
                                                     {Array.from({ length: gvExtra }).map((_, i) => (
                                                       <p key={i} className="leading-relaxed text-xs m-0 p-0 select-none">&nbsp;</p>
                                                     ))}
@@ -1643,9 +1683,7 @@ export default function HomePage() {
                                                 const hsExtra = gvLines > hsLines ? gvLines - hsLines : 0;
                                                 return (
                                                   <React.Fragment key={sIdx}>
-                                                    <p className="text-slate-800 leading-relaxed text-xs whitespace-pre-line m-0 p-0 text-justify">
-                                                      {ensureDash(st.hs)}
-                                                    </p>
+                                                    {renderStepContent(st.hs)}
                                                     {Array.from({ length: hsExtra }).map((_, i) => (
                                                       <p key={i} className="leading-relaxed text-xs m-0 p-0 select-none">&nbsp;</p>
                                                     ))}

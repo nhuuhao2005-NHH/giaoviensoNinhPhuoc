@@ -5,6 +5,7 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { responseSchema, systemInstruction } = require("./schema-and-prompt");
 const { validateKhbd } = require("./validate-khbd");
 const { renderKhbd } = require("./render-khbd");
+const { resolveAIPlan, buildAIInstructionPrompt } = require("./ai-rules");
 
 const MAX_TRIES = 3;
 
@@ -129,10 +130,14 @@ async function processKhbd(file, options) {
     askParts.push(`Không tích hợp Năng lực số (để nang_luc_so rỗng []).`);
   }
 
+  let aiPlan = null;
   if (options.aiCodes && options.aiCodes.length > 0) {
+    aiPlan = resolveAIPlan(options.infrastructureLevel, options.aiCodes, options.teacherSuggestions);
+    const aiGuidance = buildAIInstructionPrompt(aiPlan);
     askParts.push(
       `Mã Trí tuệ nhân tạo (AI) cần tích hợp (chỉ các mã này):\n` +
-        options.aiCodes.map((c) => `- ${c.ma}: ${c.noi_dung}`).join("\n")
+        options.aiCodes.map((c) => `- ${c.ma}: ${c.noi_dung}`).join("\n") +
+        `\n\n${aiGuidance}`
     );
   } else {
     askParts.push(`Không tích hợp AI (để tich_hop_ai rỗng []).`);
@@ -212,7 +217,7 @@ async function processKhbd(file, options) {
       continue;
     }
 
-    const { data, errors } = validateKhbd(json, selected, selectedAi);
+    const { data, errors } = validateKhbd(json, selected, selectedAi, aiPlan);
     last = data;
     if (!errors.length) return renderKhbd(data, { mon: options.mon, tiet: options.tiet });
     feedback = "Sửa các lỗi sau rồi trả lại toàn bộ JSON:\n- " + errors.join("\n- ");
