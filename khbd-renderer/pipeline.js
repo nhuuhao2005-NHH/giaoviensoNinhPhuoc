@@ -59,26 +59,48 @@ function rankModels(modelList) {
   return [...flash, ...nonFlash];
 }
 
+function convertHtmlToCleanText(html) {
+  let s = String(html || "");
+  // Thay thế toàn bộ hình ảnh bằng "<Hình ảnh>" để giảm tối đa token khi đọc file
+  s = s.replace(/<img[^>]*>/gi, " <Hình ảnh> ");
+  s = s.replace(/<\/tr>/gi, "\n");
+  s = s.replace(/<\/t[dh]>/gi, "\t");
+  s = s.replace(/<\/p>/gi, "\n\n");
+  s = s.replace(/<br\s*\/?>/gi, "\n");
+  s = s.replace(/<\/h[1-6]>/gi, "\n\n");
+  s = s.replace(/<\/li>/gi, "\n");
+  s = s.replace(/<[^>]+>/g, "");
+  s = s.replace(/[ \t]+/g, " ");
+  s = s.replace(/\n\s*\n+/g, "\n\n").trim();
+  return s;
+}
+
 // Đọc giáo án giáo viên tải lên: .docx -> chữ; .pdf -> gửi thẳng cho Gemini; .txt/.md -> chữ
 async function toParts(file) {
   const name = (file.name || "").toLowerCase();
   if (name.endsWith(".docx")) {
-    const raw = await mammoth.extractRawText({ buffer: file.buffer });
     const html = await mammoth.convertToHtml(
       { buffer: file.buffer },
       { convertImage: mammoth.images.imgElement(() => Promise.resolve({ src: "" })) }
     );
-    let textContent = raw.value || "";
-    // Lược bỏ hình ảnh base64 khổng lồ để tránh làm phình prompt gây quá tải / timeout
-    const cleanHtml = (html.value || "").replace(/<img[^>]*>/gi, "[Hình ảnh]");
-    if (cleanHtml && cleanHtml.includes("<table")) {
-      textContent += `\n\n--- CẤU TRÚC BẢNG BIỂU CHI TIẾT TRONG GIÁO ÁN GỐC (DẠNG HTML) ---\n${cleanHtml}`;
+    // Thay thế toàn bộ hình ảnh bằng "<Hình ảnh>" để giảm tối đa token khi đọc file
+    const cleanHtml = (html.value || "").replace(/<img[^>]*>/gi, " <Hình ảnh> ");
+    const textContent = convertHtmlToCleanText(cleanHtml);
+    let fullText = textContent;
+    if (cleanHtml.includes("<table")) {
+      fullText += `\n\n--- CẤU TRÚC BẢNG BIỂU CHI TIẾT TRONG GIÁO ÁN GỐC (DẠNG HTML ĐÃ THAY ẢNH BẰNG <Hình ảnh>) ---\n${cleanHtml}`;
     }
-    return [{ text: `GIÁO ÁN GỐC CỦA GIÁO VIÊN TẢI LÊN:\n${textContent}` }];
+    return [{ text: `GIÁO ÁN GỐC CỦA GIÁO VIÊN TẢI LÊN:\n${fullText}` }];
   }
   if (name.endsWith(".pdf"))
-    return [{ inlineData: { data: file.buffer.toString("base64"), mimeType: "application/pdf" } }, { text: "GIÁO ÁN GỐC CỦA GIÁO VIÊN TẢI LÊN (tệp PDF đính kèm)." }];
-  return [{ text: `GIÁO ÁN GỐC CỦA GIÁO VIÊN TẢI LÊN:\n${file.buffer.toString("utf8")}` }];
+    return [
+      { inlineData: { data: file.buffer.toString("base64"), mimeType: "application/pdf" } },
+      { text: "GIÁO ÁN GỐC CỦA GIÁO VIÊN TẢI LÊN (tệp PDF đính kèm).\nLƯU Ý QUAN TRỌNG: Với mọi hình ảnh, tranh ảnh minh họa, sơ đồ trong giáo án: xóa ảnh và thay vào đúng vị trí đó dòng chữ '<Hình ảnh>' để giảm tối đa token." },
+    ];
+  const utf8Text = file.buffer.toString("utf8")
+    .replace(/!\[.*?\]\(.*?\)/g, "<Hình ảnh>")
+    .replace(/\[Hình ảnh\]/g, "<Hình ảnh>");
+  return [{ text: `GIÁO ÁN GỐC CỦA GIÁO VIÊN TẢI LÊN:\n${utf8Text}` }];
 }
 
 /**
@@ -110,6 +132,7 @@ async function processKhbd(file, options) {
     `YÊU CẦU ĐẶC BIỆT BẮT BUỘC:
 - TÔN TRỌNG TUYỆT ĐỐI NỘI DUNG CỦA GIÁO VIÊN: Giữ nguyên vẹn 100% nội dung, câu từ, diễn đạt, câu hỏi, hướng dẫn và các bước trong giáo án gốc của giáo viên.
 - TUYỆT ĐỐI KHÔNG ĐƯỢC TỰ Ý ĐIỀU CHỈNH, không tóm tắt, không rút gọn hay viết lại câu chữ của giáo viên theo ý mình.
+- XỬ LÝ HÌNH ẢNH: Nếu giáo án đưa lên có chứa hình ảnh/tranh ảnh/sơ đồ, hãy xóa ảnh đó đi và thay vào đúng vị trí đó dòng chữ "<Hình ảnh>" để giảm tối đa token khi đọc file.
 - Giữ nguyên đầy đủ tất cả các hoạt động, các bước, các ví dụ, bài tập mà giáo viên đã soạn.
 - Bổ sung thêm hoạt động tương ứng của học sinh (HS) nếu giáo án gốc chỉ có việc của GV để đảm bảo tính nhất quán và song hành giữa GV - HS.
 - Luôn luôn viết hoa "GV" và "HS" ở đầu mỗi câu.

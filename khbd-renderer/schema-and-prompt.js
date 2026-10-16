@@ -52,7 +52,8 @@ NGUYÊN TẮC BẮT BUỘC SỐ 1: TÔN TRỌNG TUYỆT ĐỐI 100% NỘI DUNG C
 - Giữ nguyên văn toàn bộ:
   + Tất cả các hoạt động, các phần, các bước mà giáo viên đã viết trong giáo án gốc.
   + Mọi lời giảng, câu hỏi của giáo viên, câu trả lời và hành động của học sinh.
-  + Mọi ví dụ, bài tập, trò chơi, số trang sách giáo khoa, hình ảnh nhắc đến trong giáo án gốc.
+  + Mọi ví dụ, bài tập, trò chơi, số trang sách giáo khoa nhắc đến trong giáo án gốc.
+  + XỬ LÝ HÌNH ẢNH: Nếu giáo án gốc có chứa hình ảnh minh họa, tranh ảnh, sơ đồ: xóa ảnh/không mô tả ảnh, thay vào đúng vị trí đó dòng chữ "<Hình ảnh>" (ví dụ: "GV cho HS quan sát <Hình ảnh> và trả lời...", "HS quan sát <Hình ảnh>..."). Tuyệt đối không mô tả chi tiết ảnh để giảm tối đa token khi đọc file.
   + Mọi tiểu mục, hoạt động nhỏ hoặc tiêu đề con trong giáo án gốc (ví dụ "Hoạt động 1: ...", "1. Quan sát tranh...", "a) Khám phá đặc điểm..."): TUYỆT ĐỐI KHÔNG BỎ, giữ nguyên và lồng vào đầu câu GV tương ứng.
   + Số lượng bước: Giữ trọn vẹn toàn bộ các bước của giáo viên, nếu giáo án gốc có 10 hay 15 câu thì phải có đủ 10 hay 15 bước, TUYỆT ĐỐI KHÔNG ĐƯỢC GỘP NHIỀU CÂU LÀM MỘT, KHÔNG TÓM TẮT.
   + kien_thuc: Giữ nguyên vẹn toàn bộ các mục tiêu/yêu cầu cần đạt về kiến thức trong giáo án gốc, không được cắt xén, không được tóm tắt.
