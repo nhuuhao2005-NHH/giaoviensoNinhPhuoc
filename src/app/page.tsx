@@ -210,7 +210,7 @@ export default function HomePage() {
   const [lessonTitle, setLessonTitle] = useState("");
   const [duration, setDuration] = useState("1 tiết (35 phút)");
   const [infrastructureLevel, setInfrastructureLevel] = useState(
-    "Ti vi / Màn hình tương tác"
+    "Tivi/máy chiếu"
   );
   const [learningObjectives, setLearningObjectives] = useState("");
   const [teacherSuggestions, setTeacherSuggestions] = useState("");
@@ -1144,20 +1144,20 @@ export default function HomePage() {
               </div>
 
 
-              {/* 3. Đồ dùng & Thiết bị hiện có của lớp */}
+              {/* 3. Đồ dùng và thiết bị lớp học */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  3. Đồ dùng &amp; Thiết bị hiện có của lớp
+                  3. Đồ dùng và thiết bị lớp học
                 </label>
                 <select
                   value={infrastructureLevel}
                   onChange={(e) => setInfrastructureLevel(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
                 >
-                  <option>Ti vi / Màn hình tương tác</option>
-                  <option>Máy chiếu của giáo viên</option>
-                  <option>Phòng máy tính</option>
-                  <option>Chỉ có bảng lớp và tranh ảnh</option>
+                  <option>Tivi/máy chiếu</option>
+                  <option>Màn hình tương tác</option>
+                  <option>Phòng Tin học</option>
+                  <option>Chỉ có bảng và tranh ảnh</option>
                 </select>
               </div>
 
