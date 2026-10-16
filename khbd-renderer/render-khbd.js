@@ -100,7 +100,7 @@ function measureLines(text, font = regularFont, fontSizePt = 14, maxWidthPt = MA
   return Math.max(1, totalLines);
 }
 
-// ---- VIỆC 1: Chuẩn hóa lặp chủ thể (chạy trước Việc 2)
+// ---- Chuẩn hóa khoảng trắng & ký hiệu, không tự ý chèn thêm GV / HS vào câu
 function normalizeActor(line, actor) {
   let s = String(line ?? "").trim();
   if (!s) return "";
@@ -113,23 +113,11 @@ function normalizeActor(line, actor) {
   const markerMatch = s.match(/^[-+\s]+/);
   let marker = "";
   if (markerMatch && /[-+]/.test(markerMatch[0])) {
-    marker = markerMatch[0].includes("-") ? "-" : "+";
+    marker = "-";
     s = s.replace(/^[-+\s]+/, "");
   }
 
-  const who = actor === "HS" ? "(?:HS|học sinh|các em)" : "(?:GV|giáo viên)";
-  const sep = "[-:.,–\\s]+";
-  const bare = new RegExp(`^${who}(?:${sep}|$)`, "iu");
-  const counted = new RegExp(`^(?:một số|vài|\\d+\\s*[-–]\\s*\\d+|\\d+)\\s*${who}(?:${sep}|$)`, "iu");
-
-  let prev;
-  do {
-    prev = s;
-    s = s.replace(counted, "").replace(bare, "").trim();
-    s = s.replace(/^[-:.,–\s]+/, "").trim();
-  } while (s !== prev);
-
-  return `${marker ? marker + " " : ""}${actor} ${s}`.trim();
+  return `${marker ? marker + " " : ""}${s}`.trim();
 }
 
 // ---- Làm sạch văn bản do LLM trả về (chặn markdown, gạch đầu dòng thừa, lời chào…)
@@ -155,15 +143,10 @@ function thoiGian(h, ten) {
   return m ? `${m} phút` : "… phút";
 }
 
-// ---- Câu luôn mở đầu bằng "GV" hoặc "HS"; bỏ nhãn "Liên hệ:" nếu Gemini lỡ ghi
+// ---- Bỏ nhãn "Liên hệ:" nếu Gemini lỡ ghi
 const noLabel = (t) => t.replace(/^\s*Liên hệ\s*[:\-–]\s*/i, "");
-function withRole(role, t) {
-  if (!t) return "";
-  if (new RegExp(`^${role}\\b`).test(t)) return t;
-  return `${role} ${t.charAt(0).toLowerCase()}${t.slice(1)}`;
-}
 
-// ---- Mỗi hoạt động gồm các "bước" song hành {gv, hs, ma_nls?}
+// ---- Mỗi hoạt động gồm các "bước" song hành {gv, hs, ma_nls?} sử dụng trực tiếp nội dung giáo án
 function steps(h) {
   let st = Array.isArray(h.cac_buoc) ? h.cac_buoc : [];
   if (!st.length) { // dự phòng định dạng cũ: ghép theo thứ tự gv[i] <-> hs[i]
@@ -175,8 +158,8 @@ function steps(h) {
       const ma = x.ma_nls ? bareCode(x.ma_nls) : "";
       const rawGv = inlineCodes(noLabel(clean(x.gv))) + (ma ? ` (${ma})` : "");
       const rawHs = inlineCodes(noLabel(clean(x.hs)));
-      const gv = clean(x.gv) ? normalizeActor(rawGv, "GV") : "";
-      const hs = clean(x.hs) ? normalizeActor(rawHs, "HS") : "";
+      const gv = clean(x.gv) ? rawGv.trim() : "";
+      const hs = clean(x.hs) ? rawHs.trim() : "";
       return { gv, hs };
     })
     .filter((x) => x.gv || x.hs);
@@ -349,12 +332,12 @@ function buildDoc(d0, opts = {}) {
 
     // Từng cặp câu song hành giữa GV và HS
     steps(h).forEach((st, sIdx) => {
-      // Chuẩn hóa ở Việc 1 phải xong trước khi đo
-      const gvText = normalizeActor(st.gv, "GV");
-      const hsText = normalizeActor(st.hs, "HS");
+      const cleanLine = (t) => String(t ?? "").trim().replace(/^[-+•*]\s*/, "");
+      const gvClean = cleanLine(st.gv);
+      const hsClean = cleanLine(st.hs);
 
-      const dashGv = gvText.startsWith("-") ? gvText : `- ${gvText}`;
-      const dashHs = hsText.startsWith("-") ? hsText : `- ${hsText}`;
+      const dashGv = gvClean ? `- ${gvClean}` : "";
+      const dashHs = hsClean ? `- ${hsClean}` : "";
 
       // Đo số dòng chữ thật
       const n_gv = measureLines(dashGv, regularFont, 14, MAX_W_PT);

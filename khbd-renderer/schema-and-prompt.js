@@ -52,19 +52,17 @@ NGUYÊN TẮC BẮT BUỘC SỐ 1: TÔN TRỌNG TUYỆT ĐỐI 100% NỘI DUNG C
 - Giữ nguyên văn toàn bộ:
   + Tất cả các hoạt động, các phần, các bước mà giáo viên đã viết trong giáo án gốc.
   + Mọi lời giảng, câu hỏi của giáo viên, câu trả lời và hành động của học sinh.
-  + Mọi ví dụ, bài tập, trò chơi, số trang sách giáo khoa nhắc đến trong giáo án gốc.
-  + XỬ LÝ HÌNH ẢNH: Nếu giáo án gốc có chứa hình ảnh minh họa, tranh ảnh, sơ đồ: xóa ảnh/không mô tả ảnh, thay vào đúng vị trí đó dòng chữ "<Hình ảnh>" (ví dụ: "GV cho HS quan sát <Hình ảnh> và trả lời...", "HS quan sát <Hình ảnh>..."). Tuyệt đối không mô tả chi tiết ảnh để giảm tối đa token khi đọc file.
+  + Mọi ví dụ, bài tập, trò chơi, số trang sách giáo khoa, hình ảnh nhắc đến trong giáo án gốc.
   + Mọi tiểu mục, hoạt động nhỏ hoặc tiêu đề con trong giáo án gốc (ví dụ "Hoạt động 1: ...", "1. Quan sát tranh...", "a) Khám phá đặc điểm..."): TUYỆT ĐỐI KHÔNG BỎ, giữ nguyên và lồng vào đầu câu GV tương ứng.
   + Số lượng bước: Giữ trọn vẹn toàn bộ các bước của giáo viên, nếu giáo án gốc có 10 hay 15 câu thì phải có đủ 10 hay 15 bước, TUYỆT ĐỐI KHÔNG ĐƯỢC GỘP NHIỀU CÂU LÀM MỘT, KHÔNG TÓM TẮT.
   + kien_thuc: Giữ nguyên vẹn toàn bộ các mục tiêu/yêu cầu cần đạt về kiến thức trong giáo án gốc, không được cắt xén, không được tóm tắt.
   + do_dung_gv, do_dung_hs: Giữ nguyên đầy đủ danh mục đồ dùng dạy học của giáo viên và học sinh từ giáo án gốc, không tự ý lược bỏ.
 
 2. CÁC BƯỚC HOẠT ĐỘNG SONG HÀNH (cac_buoc):
-- Mỗi hoạt động gồm các bước song hành giữa GV và HS.
-- "gv": GIỮ NGUYÊN NGUYÊN VĂN 100% việc làm, câu nói, câu hỏi, hướng dẫn của giáo viên từ giáo án gốc (chỉ cần đảm bảo bắt đầu bằng chữ in hoa "GV", ví dụ "GV hướng dẫn học sinh..."). TUYỆT ĐỐI KHÔNG XÓA NỘI DUNG CỦA GV.
-- "hs": GIỮ NGUYÊN NGUYÊN VĂN 100% việc làm, câu trả lời của học sinh từ giáo án gốc (bắt đầu bằng chữ in hoa "HS", ví dụ "HS quan sát và trả lời...").
-- BỔ SUNG ĐỂ NHẤT QUÁN: Nếu trong giáo án gốc ở một bước nào đó giáo viên chỉ ghi việc của GV mà chưa ghi việc của HS hoặc ghi quá ngắn, bạn CẦN BỔ SUNG THÊM bên hoạt động học sinh (hs) hành động tương ứng (ví dụ: "HS lắng nghe, quan sát và thực hiện theo hướng dẫn của GV.") để giữa 2 hoạt động của GV và HS có sự nhất quán, tương ứng và song hành chặt chẽ. TUYỆT ĐỐI KHÔNG ĐƯỢC XÓA BỚT việc làm của GV!
-- LƯU Ý BẮT BUỘC: Sử dụng chữ in hoa "GV" và "HS" ở đầu mỗi câu (luôn luôn là "GV" và "HS", không viết thường "gv", "hs" hay thay bằng các cụm từ khác).
+- Mỗi hoạt động gồm các bước song hành giữa việc của giáo viên và việc của học sinh.
+- "gv": SỬ DỤNG TRỰC TIẾP NỘI DUNG HOẠT ĐỘNG TỪ FILE GIÁO ÁN GỐC CỦA GIÁO VIÊN. TUYỆT ĐỐI KHÔNG TỰ Ý CHÈN THÊM TỪ "GV", không làm méo mó câu chữ, giữ đúng nguyên văn câu từ như file giáo án cung cấp.
+- "hs": SỬ DỤNG TRỰC TIẾP NỘI DUNG HOẠT ĐỘNG TỪ FILE GIÁO ÁN GỐC CỦA HỌC SINH. TUYỆT ĐỐI KHÔNG TỰ Ý CHÈN THÊM TỪ "HS", giữ đúng nguyên văn câu từ như file giáo án cung cấp.
+- BỔ SUNG NẾU THIẾU: Nếu trong giáo án gốc ở một bước nào đó chỉ có việc của GV mà chưa có việc của HS hoặc ghi quá ngắn, bạn CẦN BỔ SUNG THÊM hành động tương ứng của học sinh (ví dụ: "Lắng nghe, quan sát và thực hiện theo hướng dẫn.") để giữa 2 hoạt động có sự nhất quán và song hành chặt chẽ. TUYỆT ĐỐI KHÔNG ĐƯỢC XÓA BỚT việc làm của GV và không tự ý chèn thêm các chữ cái "GV" hay "HS" vào đầu câu.
 
 3. TIÊU ĐỀ BÀI DẠY VÀ THỜI GIAN:
 - bai: TẤT CẢ TÊN BÀI PHẢI LÀ CHỮ IN HOA (ví dụ: "3: SỬ DỤNG QUẠT ĐIỆN", "1: LÀM QUEN VỚI MÁY TÍNH"). Nếu giáo án gốc có chữ "Bài" thì chỉ lấy số bài và tên bài, xóa chữ "Bài" bị lặp (ví dụ "1: ...").

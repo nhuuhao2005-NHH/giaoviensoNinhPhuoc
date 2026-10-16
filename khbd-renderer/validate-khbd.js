@@ -30,10 +30,10 @@ function validateKhbd(raw, selectedCodes = [], selectedAiCodes = []) {
       const hsClean = clean(s.hs);
       if (gvClean && !hsClean) {
         // Tôn trọng 100% nội dung của GV, tự động bổ sung việc của HS để đảm bảo tính nhất quán và song hành
-        s.hs = "HS lắng nghe, quan sát và thực hiện theo hướng dẫn của GV.";
+        s.hs = "Lắng nghe, quan sát và thực hiện theo hướng dẫn.";
       } else if (!gvClean && hsClean) {
         // Tự động bổ sung việc của GV
-        s.gv = "GV quan sát, hướng dẫn và hỗ trợ HS thực hiện.";
+        s.gv = "Quan sát, hướng dẫn và hỗ trợ học sinh thực hiện.";
       }
     });
   });

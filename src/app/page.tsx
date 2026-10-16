@@ -43,45 +43,11 @@ interface PreviewActivity {
   steps: PreviewStep[];
 }
 
-function normalizeActor(line: string, actor: "GV" | "HS"): string {
-  let s = (line || "").trim();
-  if (!s) return "";
-
-  // Xử lý lỗi khoảng trắng đôi và dấu chấm đôi '..'
-  s = s.replace(/[ \t]+/g, " ");
-  s = s.replace(/\.{4,}/g, "...").replace(/(?<!\.)\.\.(?!\.)/g, ".");
-
-  // Lưu rồi xóa ký hiệu '-' / '+' đầu câu (kể cả lặp: '- -', '+ -', '- +')
-  const markerMatch = s.match(/^[-+\s]+/);
-  let marker = "";
-  if (markerMatch && /[-+]/.test(markerMatch[0])) {
-    marker = markerMatch[0].includes("-") ? "-" : "+";
-    s = s.replace(/^[-+\s]+/, "");
-  }
-
-  const who = actor === "HS" ? "(?:HS|học sinh|các em)" : "(?:GV|giáo viên)";
-  const sep = "[-:.,–\\s]+";
-  const bare = new RegExp(`^${who}(?:${sep}|$)`, "iu");
-  const counted = new RegExp(`^(?:một số|vài|\\d+\\s*[-–]\\s*\\d+|\\d+)\\s*${who}(?:${sep}|$)`, "iu");
-
-  let prev;
-  do {
-    prev = s;
-    s = s.replace(counted, "").replace(bare, "").trim();
-    s = s.replace(/^[-:.,–\s]+/, "").trim();
-  } while (s !== prev);
-
-  return `${marker ? marker + " " : ""}${actor} ${s}`.trim();
-}
-
-function ensureDash(text: string, actor?: "GV" | "HS"): string {
+function ensureDash(text: string): string {
   let t = (text || "").trim();
   if (!t) return "";
-  if (actor) {
-    t = normalizeActor(t, actor);
-  }
-  if (t.startsWith("-")) return t;
-  return `- ${t}`;
+  const content = t.replace(/^[-+•*]\s*/, "");
+  return `- ${content}`;
 }
 
 function formatLessonTitle(raw: string): string {
@@ -101,7 +67,58 @@ function formatLessonTitle(raw: string): string {
   return `BÀI: ${s.toUpperCase()}`.trim();
 }
 
-function parsePlanForPreview(rawPlan: string) {
+function parsePlanForPreview(rawPlan: string, htmlPlan?: string) {
+  // Ưu tiên bóc tách trực tiếp từ cấu trúc bảng HTML để tách 2 cột GV và HS chuẩn xác 100% mà không phụ thuộc từ khóa "GV" hay "HS"
+  if (htmlPlan && htmlPlan.includes("<table")) {
+    const parts = htmlPlan.split("<table");
+    const beforeSectionIII = parts[0]
+      .replace(/<[^>]+>/g, "\n")
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const afterTable = (parts[1] || "").split("</table>")[1] || "";
+    const afterSectionIII = afterTable
+      .replace(/<[^>]+>/g, "\n")
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const activities: PreviewActivity[] = [];
+    const trs = htmlPlan.match(/<tr>[\s\S]*?<\/tr>/g) || [];
+    for (let i = 1; i < trs.length; i += 2) {
+      const titleRow = trs[i];
+      const contentRow = trs[i + 1] || "";
+      const rawTitle = (titleRow.match(/<td>([\s\S]*?)<\/td>/) || ["", ""])[1]
+        .replace(/<[^>]+>/g, "")
+        .trim();
+      const title = rawTitle
+        .replace(/Luyện\s*tập\s*thực\s*hành/gi, "Luyện tập, thực hành")
+        .replace(/Vận\s*dụng\s*trải\s*nghiệm/gi, "Vận dụng, trải nghiệm");
+
+      const tds = contentRow.match(/<td>[\s\S]*?<\/td>/g) || [];
+      const gvPs = ((tds[0] || "").match(/<p>[\s\S]*?<\/p>/g) || [])
+        .map((p) => p.replace(/<[^>]+>/g, "").trim())
+        .filter(Boolean);
+      const hsPs = ((tds[1] || "").match(/<p>[\s\S]*?<\/p>/g) || [])
+        .map((p) => p.replace(/<[^>]+>/g, "").trim())
+        .filter(Boolean);
+
+      const steps: PreviewStep[] = [];
+      const maxLen = Math.max(gvPs.length, hsPs.length);
+      for (let k = 0; k < maxLen; k++) {
+        steps.push({
+          gv: gvPs[k] || "",
+          hs: hsPs[k] || "",
+        });
+      }
+      activities.push({ title, steps });
+    }
+
+    return { beforeSectionIII, activities, afterSectionIII };
+  }
+
+  // Fallback nếu không có HTML
   const lines = rawPlan.split("\n");
   const beforeSectionIII: string[] = [];
   const afterSectionIII: string[] = [];
@@ -120,7 +137,6 @@ function parsePlanForPreview(rawPlan: string) {
           st.hs = currentActHsQueue[q++];
         }
       }
-      // Nếu có thêm bước HS mà hết bước GV
       while (q < currentActHsQueue.length) {
         currentAct.steps.push({ gv: "", hs: currentActHsQueue[q++] });
       }
@@ -154,12 +170,10 @@ function parsePlanForPreview(rawPlan: string) {
     }
 
     if (inIII) {
-      // Bỏ qua dòng tiêu đề bảng nếu có
       if (/^Hoạt động của (?:giáo viên|học sinh)/i.test(line)) {
         continue;
       }
 
-      // Phát hiện tiêu đề hoạt động: 1. Khởi động..., 2. Khám phá...
       if (/^(?:[1-4]\.|\d+\.)\s*(?:Khởi động|Khám phá|Luyện tập|Vận dụng)/i.test(line)) {
         finalizeActivity();
         const normalizedTitle = line
@@ -202,7 +216,6 @@ function parsePlanForPreview(rawPlan: string) {
   }
 
   finalizeActivity();
-
   return { beforeSectionIII, activities, afterSectionIII };
 }
 
@@ -248,6 +261,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [generatedPlan, setGeneratedPlan] = useState("");
+  const [generatedHtml, setGeneratedHtml] = useState("");
   const [generatedDocxBlob, setGeneratedDocxBlob] = useState<Blob | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [copied, setCopied] = useState(false);
@@ -271,9 +285,9 @@ export default function HomePage() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   const parsedPreview = useMemo(() => {
-    if (!generatedPlan) return null;
-    return parsePlanForPreview(generatedPlan);
-  }, [generatedPlan]);
+    if (!generatedPlan && !generatedHtml) return null;
+    return parsePlanForPreview(generatedPlan, generatedHtml);
+  }, [generatedPlan, generatedHtml]);
 
   useEffect(() => {
     const savedKey = localStorage.getItem("gemini_api_key");
@@ -360,6 +374,7 @@ export default function HomePage() {
 
     setLoading(true);
     setGeneratedPlan("");
+    setGeneratedHtml("");
     setGeneratedDocxBlob(null);
     setActiveTab("result");
 
@@ -416,12 +431,14 @@ export default function HomePage() {
       const blob = await res.blob();
       setGeneratedDocxBlob(blob);
 
-      // Đọc trích xuất text để hiển thị xem trước (không tự động tải file về, để giáo viên chủ động bấm nút tải)
+      // Đọc trích xuất text & HTML để hiển thị xem trước trực tiếp cấu trúc bảng (không tự động tải file về, để giáo viên chủ động bấm nút tải)
       try {
         const mammoth = await import("mammoth");
         const arrayBuffer = await blob.arrayBuffer();
-        const { value } = await mammoth.extractRawText({ arrayBuffer });
-        setGeneratedPlan(value);
+        const { value: rawVal } = await mammoth.extractRawText({ arrayBuffer });
+        const { value: htmlVal } = await mammoth.convertToHtml({ arrayBuffer });
+        setGeneratedPlan(rawVal || "");
+        setGeneratedHtml(htmlVal || "");
       } catch {
         setGeneratedPlan(
           "Kế hoạch bài dạy đã tạo thành công. Thầy/cô vui lòng bấm nút 'Tải file Word (.docx)' ở góc trên để tải file về máy tính."
@@ -1607,7 +1624,7 @@ export default function HomePage() {
                                                 return (
                                                   <React.Fragment key={sIdx}>
                                                     <p className="text-slate-800 leading-relaxed text-xs whitespace-pre-line m-0 p-0 text-justify">
-                                                      {ensureDash(st.gv, "GV")}
+                                                      {ensureDash(st.gv)}
                                                     </p>
                                                     {Array.from({ length: gvExtra }).map((_, i) => (
                                                       <p key={i} className="leading-relaxed text-xs m-0 p-0 select-none">&nbsp;</p>
@@ -1627,7 +1644,7 @@ export default function HomePage() {
                                                 return (
                                                   <React.Fragment key={sIdx}>
                                                     <p className="text-slate-800 leading-relaxed text-xs whitespace-pre-line m-0 p-0 text-justify">
-                                                      {ensureDash(st.hs, "HS")}
+                                                      {ensureDash(st.hs)}
                                                     </p>
                                                     {Array.from({ length: hsExtra }).map((_, i) => (
                                                       <p key={i} className="leading-relaxed text-xs m-0 p-0 select-none">&nbsp;</p>
