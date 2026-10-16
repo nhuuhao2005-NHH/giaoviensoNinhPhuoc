@@ -169,6 +169,14 @@ function parsePlanForPreview(rawPlan: string) {
         continue;
       }
 
+      const isAiHeader = /^\*?\s*Tích hợp AI/i.test(line);
+      if (isAiHeader) {
+        if (currentAct) {
+          currentAct.steps.push({ gv: line, hs: "" });
+        }
+        continue;
+      }
+
       const isGV =
         /^(?:[-+•]\s*)?GV\b/i.test(line) ||
         /^[-+•]?\s*Hoạt động của giáo viên/i.test(line);
@@ -178,15 +186,22 @@ function parsePlanForPreview(rawPlan: string) {
 
       if (isGV) {
         if (currentAct) {
-          currentAct.steps.push({ gv: line, hs: "" });
+          const lastStep = currentAct.steps[currentAct.steps.length - 1];
+          if (lastStep && /^\*?\s*Tích hợp AI/i.test(lastStep.gv)) {
+            lastStep.gv += "\n" + line;
+          } else {
+            currentAct.steps.push({ gv: line, hs: "" });
+          }
         }
       } else if (isHS) {
         currentActHsQueue.push(line);
       } else if (currentAct && currentAct.steps.length > 0) {
-        if (currentActHsQueue.length > 0) {
+        const lastStep = currentAct.steps[currentAct.steps.length - 1];
+        if (lastStep && /^\*?\s*Tích hợp AI/i.test(lastStep.gv)) {
+          lastStep.gv += "\n" + line;
+        } else if (currentActHsQueue.length > 0) {
           currentActHsQueue[currentActHsQueue.length - 1] += "\n" + line;
         } else {
-          const lastStep = currentAct.steps[currentAct.steps.length - 1];
           lastStep.gv += "\n" + line;
         }
       }
@@ -401,6 +416,7 @@ export default function HomePage() {
       if (teacherSuggestions) formData.append("teacherSuggestions", teacherSuggestions);
       formData.append("codes", JSON.stringify(codes));
       formData.append("aiCodes", JSON.stringify(aiCodes));
+      formData.append("integrateAI", String(integrateAI));
       if (apiKey) formData.append("apiKey", apiKey);
 
       const res = await fetch("/api/khbd", {
@@ -1645,7 +1661,7 @@ export default function HomePage() {
                               </div>
                             </div>
 
-                            {/* PHẦN IV: ĐIỀU CHỈNH SAU BÀI DẠY */}
+                            {/* PHẦN IV: ĐIỀU CHỈNH SAU BÀI DẠY VÀ GHI CHÚ TÍCH HỢP */}
                             <div className="pt-2 space-y-1">
                               {parsedPreview.afterSectionIII.map((line, idx) => (
                                 <p
@@ -1653,6 +1669,10 @@ export default function HomePage() {
                                   className={
                                     line.startsWith("IV.")
                                       ? "font-bold text-sm text-slate-900 pt-2"
+                                      : /^\*?\s*Ghi chú/i.test(line)
+                                      ? "font-bold italic text-sm text-indigo-900 pt-3"
+                                      : line.startsWith("- ")
+                                      ? "text-slate-700 italic text-xs pl-2"
                                       : "text-slate-400 font-mono text-xs overflow-hidden"
                                   }
                                 >

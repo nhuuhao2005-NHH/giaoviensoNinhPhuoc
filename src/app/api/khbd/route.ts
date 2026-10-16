@@ -14,6 +14,7 @@ export async function POST(req: Request) {
     let infrastructureLevel = "";
     let teacherSuggestions = "";
     let apiKey = "";
+    let integrateAI = false;
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
@@ -48,6 +49,9 @@ export async function POST(req: Request) {
         }
       }
 
+      const integrateAIRaw = formData.get("integrateAI");
+      integrateAI = integrateAIRaw !== null ? integrateAIRaw === "true" : Boolean(aiCodes && aiCodes.length > 0);
+
       apiKey = (formData.get("apiKey") as string) || "";
     } else {
       const body = await req.json();
@@ -57,6 +61,7 @@ export async function POST(req: Request) {
       teacherSuggestions = body.teacherSuggestions || "";
       codes = body.codes || [];
       aiCodes = body.aiCodes || [];
+      integrateAI = typeof body.integrateAI === "boolean" ? body.integrateAI : Boolean(aiCodes && aiCodes.length > 0);
       apiKey = body.apiKey || "";
 
       if (body.fileBase64 && body.fileName) {
@@ -101,6 +106,7 @@ export async function POST(req: Request) {
       tiet,
       codes,
       aiCodes,
+      integrateAI,
       infrastructureLevel,
       teacherSuggestions,
       apiKey,

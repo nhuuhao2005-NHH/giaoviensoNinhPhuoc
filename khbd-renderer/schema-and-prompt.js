@@ -16,6 +16,7 @@ const responseSchema = {
     kien_thuc: strArr,
     nang_luc_so: { type: SchemaType.ARRAY, items: codeItem },
     tich_hop_ai: { type: SchemaType.ARRAY, items: codeItem },
+    ghi_chu_tich_hop: { type: SchemaType.STRING }, // Ghi chú tích hợp AI tối đa 3 dòng
     do_dung_gv: { type: SchemaType.STRING }, do_dung_hs: { type: SchemaType.STRING },
     hoat_dong: {
       type: SchemaType.ARRAY,
@@ -23,6 +24,7 @@ const responseSchema = {
         type: SchemaType.OBJECT,
         properties: {
           ten: { type: SchemaType.STRING }, thoi_gian_phut: { type: SchemaType.INTEGER },
+          khoi_tich_hop_ai: { type: SchemaType.STRING }, // khối *Tích hợp AI đặt ở cuối hoạt động nếu hoạt động này được chọn
           cac_buoc: {
             type: SchemaType.ARRAY,
             items: {
@@ -74,7 +76,18 @@ NGUYÊN TẮC BẮT BUỘC SỐ 1: TÔN TRỌNG TUYỆT ĐỐI 100% NỘI DUNG C
 4. TÍCH HỢP NĂNG LỰC SỐ VÀ AI:
 - Việc tích hợp chỉ là BỔ SUNG THÊM một cách tự nhiên, nhẹ nhàng vào bước thích hợp.
 - TUYỆT ĐỐI KHÔNG ĐƯỢC THAY THẾ, KHÔNG LÀM MẤT HOẶC BIẾN ĐỔI BẤT KỲ NỘI DUNG DẠY HỌC GỐC NÀO CỦA BÀI.
-- Ghi mã trần (ví dụ 4.1.CB1a) vào trường "ma_nls" của bước đó. Không viết nhãn "Liên hệ" trong lời thoại. Chỉ tích hợp đúng các mã người dùng chọn.
+- Năng lực số: Ghi mã trần (ví dụ 4.1.CB1a) vào trường "ma_nls" của bước đó. Không viết nhãn "Liên hệ" trong lời thoại. Chỉ tích hợp đúng các mã người dùng chọn.
+- Trí tuệ nhân tạo (AI):
+  + Nếu GV KHÔNG tích hợp AI: để tich_hop_ai rỗng [], không chèn khối *Tích hợp AI, để ghi_chu_tich_hop rỗng.
+  + Nếu GV CÓ tích hợp AI:
+    * tich_hop_ai: gồm tối đa 2 mã chỉ báo AI Lớp 3 phù hợp (kèm nội dung mã).
+    * MUST chỉ chèn ở CUỐI một trong ba hoạt động: "Khám phá", "Luyện tập, thực hành" hoặc "Vận dụng, trải nghiệm" (cột GV).
+    * Định dạng khối tích hợp AI:
+      *Tích hợp AI:
+      - <GV làm gì, HS làm gì>
+      - <hoạt động tiếp theo / chốt; HS tự làm sản phẩm>
+      - GV liên hệ giáo dục: <1–2 câu>
+    * ghi_chu_tich_hop: tối đa 3 dòng ghi rõ mã chỉ báo (kèm (Mở rộng) nếu là mã MR), điều kiện thiết bị & vị trí chèn, điểm GV cần kiểm tra.
 
 5. ĐẦU RA:
 - Chỉ trả về chuỗi JSON đúng cấu trúc schema. Tuyệt đối không thêm bất kỳ văn bản ngoài JSON nào.`;

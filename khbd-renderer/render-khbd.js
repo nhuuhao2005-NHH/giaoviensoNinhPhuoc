@@ -104,6 +104,7 @@ function measureLines(text, font = regularFont, fontSizePt = 14, maxWidthPt = MA
 function normalizeActor(line, actor) {
   let s = String(line ?? "").trim();
   if (!s) return "";
+  if (/^\*?\s*Tích hợp AI/i.test(s)) return s;
 
   // Xử lý lỗi khoảng trắng đôi và dấu chấm đôi '..'
   s = s.replace(/[ \t]+/g, " ");
@@ -180,6 +181,42 @@ function steps(h) {
       return { gv, hs };
     })
     .filter((x) => x.gv || x.hs);
+}
+
+// ---- Tách khối *Tích hợp AI (nếu có) để đưa về đúng cuối hoạt động ở cột GV
+function extractAiBlock(h) {
+  const lines = [];
+  if (h.khoi_tich_hop_ai) {
+    const raw = String(h.khoi_tich_hop_ai).trim();
+    if (raw) {
+      lines.push(...raw.split("\n").map((l) => l.trim()).filter(Boolean));
+    }
+  }
+  if (!lines.length && Array.isArray(h.cac_buoc)) {
+    const aiStepIdx = h.cac_buoc.findIndex(
+      (s) => s.gv && /^\*?\s*Tích hợp AI/i.test(String(s.gv).trim())
+    );
+    if (aiStepIdx !== -1) {
+      const aiStep = h.cac_buoc[aiStepIdx];
+      const raw = String(aiStep.gv).trim();
+      lines.push(...raw.split("\n").map((l) => l.trim()).filter(Boolean));
+      h.cac_buoc.splice(aiStepIdx, 1);
+    }
+  }
+  if (!lines.length && Array.isArray(h.cac_buoc)) {
+    for (const s of h.cac_buoc) {
+      const str = String(s.gv || "");
+      const matchIdx = str.search(/\*?\s*Tích hợp AI\s*[:\-–]?/i);
+      if (matchIdx !== -1) {
+        const teacherPart = str.slice(0, matchIdx).trim();
+        const aiPart = str.slice(matchIdx).trim();
+        s.gv = teacherPart;
+        lines.push(...aiPart.split("\n").map((l) => l.trim()).filter(Boolean));
+        break;
+      }
+    }
+  }
+  return lines;
 }
 
 // ---- Các khối dựng sẵn (Spacing Paragraph trước và sau cố định là 0, giãn dòng cố định Exactly)
@@ -347,6 +384,9 @@ function buildDoc(d0, opts = {}) {
     const gvChildren = [];
     const hsChildren = [];
 
+    // Tách khối *Tích hợp AI (nếu có) để đưa về đúng cuối hoạt động ở cột GV
+    const aiBlockLines = extractAiBlock(h);
+
     // Từng cặp câu song hành giữa GV và HS
     steps(h).forEach((st, sIdx) => {
       // Chuẩn hóa ở Việc 1 phải xong trước khi đo
@@ -380,6 +420,34 @@ function buildDoc(d0, opts = {}) {
         console.log(`  [Cặp ${sIdx + 1}] n_gv=${n_gv}, n_hs=${n_hs} -> cân bằng (0 đoạn trống)`);
       }
     });
+
+    // Nếu hoạt động này có khối Tích hợp AI ở cuối cột GV:
+    if (aiBlockLines.length > 0) {
+      console.log(`[Hoạt động ${hIdx + 1}] Chèn khối *Tích hợp AI vào cuối cột GV (${aiBlockLines.length} dòng)`);
+      let aiGvLinesCount = 0;
+      aiBlockLines.forEach((rawL) => {
+        let line = rawL.trim();
+        if (/^\*?\s*Tích hợp AI\s*[:\-–]?/i.test(line)) {
+          gvChildren.push(
+            new Paragraph({
+              spacing: { line: 276, lineRule: LineRuleType.EXACTLY, before: 60, after: 0 },
+              children: [run("*Tích hợp AI:", { bold: true, italics: true })],
+            })
+          );
+          aiGvLinesCount += 1;
+        } else {
+          const dashL = line.startsWith("-") ? line : `- ${line}`;
+          const n = measureLines(dashL, regularFont, 14, MAX_W_PT);
+          gvChildren.push(dashLine(dashL));
+          aiGvLinesCount += n;
+        }
+      });
+      // Bù các đoạn trống tương ứng vào ô HS để cân bằng chiều cao hàng bảng
+      for (let k = 0; k < aiGvLinesCount; k++) {
+        hsChildren.push(empty());
+      }
+      console.log(`  [Khối Tích hợp AI] GV có ${aiGvLinesCount} dòng -> bù ${aiGvLinesCount} đoạn trống vào HS`);
+    }
 
     const isLastActivity = hIdx === hds.length - 1;
     const bottomBorder = isLastActivity ? B : NONE;
@@ -453,6 +521,22 @@ function buildDoc(d0, opts = {}) {
     dotLine(),
     dotLine()
   );
+
+  // Cuối KHBD thêm "Ghi chú tích hợp" (tối đa 3 dòng): mã chỉ báo đã dùng, điều kiện, vị trí chèn, chỗ GV cần kiểm tra.
+  if (d.ghi_chu_tich_hop && clean(d.ghi_chu_tich_hop)) {
+    const noteLines = String(d.ghi_chu_tich_hop)
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .slice(0, 3);
+    if (noteLines.length > 0) {
+      body.push(
+        empty(),
+        para([run("*Ghi chú tích hợp:", { bold: true, italics: true })]),
+        ...noteLines.map((l) => dashLine(l, { italics: true }))
+      );
+    }
+  }
 
   return new Document({
     styles: { default: { document: { run: { font: FONT, size: SIZE } } } },

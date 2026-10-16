@@ -6,7 +6,7 @@ const TOTAL_MINUTES = 35; // một tiết tiểu học; đổi nếu trường k
 const KHOI_DONG = /kh[ởo]i\s*đ[ộo]ng/i;
 const bare = (m) => clean(m).replace(/[\[\]()]/g, "").replace(/^Mã\s*/i, "").trim();
 
-function validateKhbd(raw, selectedCodes = [], selectedAiCodes = []) {
+function validateKhbd(raw, selectedCodes = [], selectedAiCodes = [], options = {}) {
   const errors = [];
   const d = JSON.parse(JSON.stringify(raw || {}));
   const want = selectedCodes.map(bare).filter(Boolean);
@@ -80,10 +80,39 @@ function validateKhbd(raw, selectedCodes = [], selectedAiCodes = []) {
     d.hoat_dong.forEach((h) => h.cac_buoc.forEach((s) => { if (s.ma_nls && !want.includes(bare(s.ma_nls))) delete s.ma_nls; }));
   }
 
-  // 4. Mã Trí tuệ nhân tạo (AI): chuẩn hóa & lọc đúng mã đã chọn nếu có
-  d.tich_hop_ai = (d.tich_hop_ai || []).map((x) => ({ ma: bare(x.ma), noi_dung: clean(x.noi_dung) }));
-  if (wantAi.length) {
-    d.tich_hop_ai = d.tich_hop_ai.filter((x) => wantAi.includes(x.ma));
+  // 4. Trí tuệ nhân tạo (AI): chuẩn hóa & chỉ áp dụng khi GV tích AI
+  const shouldIntegrateAi = Boolean(
+    options.integrateAI === true ||
+    (options.integrateAI !== false && (wantAi.length > 0 || (d.tich_hop_ai && d.tich_hop_ai.length > 0)))
+  );
+
+  if (!shouldIntegrateAi) {
+    // Nếu GV không tích AI, bỏ qua toàn bộ phần này
+    d.tich_hop_ai = [];
+    d.ghi_chu_tich_hop = "";
+    if (Array.isArray(d.hoat_dong)) {
+      d.hoat_dong.forEach((h) => {
+        delete h.khoi_tich_hop_ai;
+      });
+    }
+  } else {
+    d.tich_hop_ai = (d.tich_hop_ai || []).map((x) => ({ ma: bare(x.ma), noi_dung: clean(x.noi_dung) }));
+    if (wantAi.length) {
+      d.tich_hop_ai = d.tich_hop_ai.filter((x) => wantAi.includes(x.ma));
+    }
+    // Tối đa 2 mã chỉ báo AI
+    if (d.tich_hop_ai.length > 2) {
+      d.tich_hop_ai = d.tich_hop_ai.slice(0, 2);
+    }
+    // Ghi chú tích hợp (tối đa 3 dòng)
+    if (d.ghi_chu_tich_hop) {
+      const noteLines = String(d.ghi_chu_tich_hop)
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .slice(0, 3);
+      d.ghi_chu_tich_hop = noteLines.join("\n");
+    }
   }
 
   return { data: d, errors };
