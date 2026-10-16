@@ -356,11 +356,7 @@ export default function HomePage() {
       const blob = await res.blob();
       setGeneratedDocxBlob(blob);
 
-      // Tự động tải xuống file Word đúng chuẩn KHBD_output.docx
-      const safeName = `KHBD_${subject.replace(/\s+/g, "_")}${tiet ? `_Tiet_${tiet}` : ""}.docx`;
-      saveAs(blob, safeName);
-
-      // Đọc trích xuất text để hiển thị xem trước
+      // Đọc trích xuất text để hiển thị xem trước (không tự động tải file về, để giáo viên chủ động bấm nút tải)
       try {
         const mammoth = await import("mammoth");
         const arrayBuffer = await blob.arrayBuffer();
@@ -368,7 +364,7 @@ export default function HomePage() {
         setGeneratedPlan(value);
       } catch {
         setGeneratedPlan(
-          "Kế hoạch bài dạy đã tạo thành công và đã tự động tải xuống máy tính của thầy/cô dưới dạng file Word (.docx)."
+          "Kế hoạch bài dạy đã tạo thành công. Thầy/cô vui lòng bấm nút 'Tải file Word (.docx)' ở góc trên để tải file về máy tính."
         );
       }
     } catch (err: unknown) {
@@ -1376,11 +1372,11 @@ export default function HomePage() {
                   <button
                     onClick={handleExportDocx}
                     disabled={isExporting}
-                    className="flex items-center space-x-1 px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition disabled:opacity-50"
-                    title="Xuất file Word chuẩn Công văn 2345 (Bảng 2 cột)"
+                    className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition disabled:opacity-50"
+                    title="Tải file Word (.docx) chuẩn Kế hoạch bài dạy"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    <span>{isExporting ? "Đang xuất..." : "Tải Word (CV 2345)"}</span>
+                    <span>{isExporting ? "Đang tải xuống..." : "Tải file Word (.docx)"}</span>
                   </button>
                 </div>
               )}
@@ -1407,7 +1403,7 @@ export default function HomePage() {
                     <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-start space-x-2 text-emerald-800 text-xs">
                       <Check className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
                       <div>
-                        <strong>Kế hoạch bài dạy đã tạo thành công và tự động tải xuống máy tính của thầy/cô!</strong> Bố cục chuẩn file Word do <code>render-khbd.js</code> tạo ra với Bảng 2 cột Hoạt động của GV &amp; HS. Thầy/cô có thể bấm <strong>&quot;Tải Word (CV 2345)&quot;</strong> để tải lại file bất cứ lúc nào.
+                        <strong>Kế hoạch bài dạy đã tạo thành công!</strong> Thầy/cô vui lòng kiểm tra nội dung ở khung bên dưới. Khi đã hài lòng, thầy/cô bấm nút <strong>&quot;Tải file Word (.docx)&quot;</strong> màu xanh ở phía trên để tải file về máy tính.
                       </div>
                     </div>
 
