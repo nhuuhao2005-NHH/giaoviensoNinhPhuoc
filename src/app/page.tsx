@@ -52,10 +52,31 @@ function ensureDash(text: string): string {
 
 function lowercaseAfterActor(text: string): string {
   if (!text) return "";
-  return text.replace(/\b(GV|HS)(\s*[:\-–]?\s*)([^\s])([^\s])?/gu, (match, actor, sep, c1, c2) => {
-    const lowerC1 = c1 ? c1.toLowerCase() : "";
-    const lowerC2 = c2 ? c2.toLowerCase() : "";
-    return actor + sep + lowerC1 + lowerC2;
+  const ABBREVIATIONS = ["HD", "YC", "NX", "ĐD", "CH", "TL"];
+
+  return text.replace(/\b(GV|HS)(\s*[:\-–]?\s*)([^\s]+)/gu, (match, actor, sep, fullWord) => {
+    const wordParts = fullWord.match(/^([A-ZÀ-Ỹa-zà-ỹ0-9_]+)(.*)$/u);
+    if (!wordParts) return match;
+
+    const mainWord = wordParts[1];
+    const punctuation = wordParts[2] || "";
+    const upperMain = mainWord.toUpperCase();
+
+    // Đối với ký tự viết tắt như HD hoặc YC thì giữ nguyên
+    if (ABBREVIATIONS.includes(upperMain)) {
+      return actor + sep + upperMain + punctuation;
+    }
+
+    // Viết thường 2 ký tự đầu của từ theo sau
+    const chars: string[] = Array.from(mainWord);
+    if (chars.length === 1) {
+      return actor + sep + chars[0].toLowerCase() + punctuation;
+    }
+
+    const c1 = chars[0].toLowerCase();
+    const c2 = chars[1].toLowerCase();
+    const rest = chars.slice(2).join("");
+    return actor + sep + c1 + c2 + rest + punctuation;
   });
 }
 
