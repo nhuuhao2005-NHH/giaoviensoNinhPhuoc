@@ -9,8 +9,9 @@ const { renderKhbd } = require("./render-khbd");
 
 const MAX_TRIES = 3;
 
-// Danh sách model dự phòng: ưu tiên gemini-1.5-flash vì luôn có 15 RPM ổn định trên mọi tài khoản Free Tier mới
+// Luôn luôn ưu tiên gemini-3.5-flash theo yêu cầu của giáo viên
 const FALLBACK_MODELS = [
+  "gemini-3.5-flash",
   "gemini-1.5-flash",
   "gemini-1.5-flash-8b",
   "gemini-2.0-flash",
@@ -61,7 +62,9 @@ function rankModels(modelList) {
 
   const score = (name) => {
     const lower = name.toLowerCase();
-    // gemini-1.5-flash là model chuẩn nhất cho Free Tier mọi tài khoản Google mới
+    // Luôn luôn ưu tiên cao nhất là gemini-3.5-flash
+    if (lower === "gemini-3.5-flash") return 1000;
+    if (lower.includes("3.5-flash")) return 900;
     if (lower === "gemini-1.5-flash") return 100;
     if (lower.includes("1.5-flash-8b")) return 95;
     if (lower === "gemini-2.0-flash") return 90;
@@ -108,11 +111,12 @@ async function processKhbd(file, options) {
   const discovered = await getAvailableModels(apiKey);
   const candidateModels = discovered.length > 0 ? rankModels(discovered) : FALLBACK_MODELS;
 
-  // Nếu giáo viên có chỉ định model cụ thể (hoặc qua biến môi trường), ưu tiên lên đầu
-  const preferredModel = options.model || options.preferredModel || process.env.GEMINI_MODEL;
-  const modelsToUse = preferredModel
-    ? [preferredModel, ...candidateModels.filter((m) => m !== preferredModel)]
-    : candidateModels;
+  // Luôn luôn là gemini-3.5-flash làm mô hình chính theo yêu cầu
+  const preferredModel = options.model || options.preferredModel || process.env.GEMINI_MODEL || "gemini-3.5-flash";
+  const modelsToUse = [
+    preferredModel,
+    ...candidateModels.filter((m) => m !== preferredModel),
+  ];
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const selected = (options.codes || []).map((c) => c.ma);

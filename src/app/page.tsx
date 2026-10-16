@@ -276,7 +276,7 @@ export default function HomePage() {
   const [showKeyPassword, setShowKeyPassword] = useState(false);
   const [keySavedNotification, setKeySavedNotification] = useState(false);
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
-  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [selectedModel, setSelectedModel] = useState<string>("gemini-3.5-flash");
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [modelsError, setModelsError] = useState("");
 
@@ -345,9 +345,7 @@ export default function HomePage() {
       fetchGoogleModels(savedKey);
     }
     const savedModel = localStorage.getItem("preferred_model");
-    if (savedModel) {
-      setSelectedModel(savedModel);
-    }
+    setSelectedModel(savedModel || "gemini-3.5-flash");
   }, []);
 
   const handleSaveApiKey = (key: string) => {
@@ -360,9 +358,7 @@ export default function HomePage() {
       localStorage.removeItem("gemini_api_key");
       setAvailableModels([]);
     }
-    if (selectedModel) {
-      localStorage.setItem("preferred_model", selectedModel);
-    }
+    localStorage.setItem("preferred_model", selectedModel || "gemini-3.5-flash");
     setKeySavedNotification(true);
     setTimeout(() => {
       setKeySavedNotification(false);
@@ -487,7 +483,7 @@ export default function HomePage() {
       formData.append("aiCodes", JSON.stringify(aiCodes));
       formData.append("integrateAI", String(integrateAI));
       if (apiKey) formData.append("apiKey", apiKey);
-      if (selectedModel) formData.append("model", selectedModel);
+      formData.append("model", selectedModel || "gemini-3.5-flash");
 
       const res = await fetch("/api/khbd", {
         method: "POST",
@@ -760,21 +756,22 @@ export default function HomePage() {
                 <select
                   value={selectedModel}
                   onChange={(e) => {
-                    setSelectedModel(e.target.value);
-                    if (e.target.value) {
-                      localStorage.setItem("preferred_model", e.target.value);
-                    } else {
-                      localStorage.removeItem("preferred_model");
-                    }
+                    const val = e.target.value || "gemini-3.5-flash";
+                    setSelectedModel(val);
+                    localStorage.setItem("preferred_model", val);
                   }}
                   className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
                 >
-                  <option value="">-- Tự động chọn model tối ưu nhất (Khuyên dùng: 1.5-Flash) --</option>
-                  {availableModels.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.id} {m.isFlash ? "⚡ (Flash - Ổn định)" : m.isPro ? "🧠 (Pro)" : ""} — Sẵn sàng tạo nội dung
-                    </option>
-                  ))}
+                  <option value="gemini-3.5-flash">
+                    ⚡ gemini-3.5-flash (Luôn luôn ưu tiên: Gemini 3.5 Flash)
+                  </option>
+                  {availableModels
+                    .filter((m) => m.id !== "gemini-3.5-flash")
+                    .map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.id} {m.isFlash ? "⚡ (Flash)" : m.isPro ? "🧠 (Pro)" : ""} — Sẵn sàng tạo nội dung
+                      </option>
+                    ))}
                 </select>
 
                 <div className="text-[11px] text-slate-500 font-medium pt-1">

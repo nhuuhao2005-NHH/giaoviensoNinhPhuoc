@@ -65,10 +65,12 @@ export async function POST(req: Request) {
         };
       });
 
-    // Sắp xếp: Ưu tiên Flash ổn định cho giáo viên
+    // Sắp xếp: Luôn luôn ưu tiên gemini-3.5-flash lên hàng đầu
     availableModels.sort((a: any, b: any) => {
       const score = (name: string) => {
         const lower = name.toLowerCase();
+        if (lower === "gemini-3.5-flash") return 1000;
+        if (lower.includes("3.5-flash")) return 900;
         if (lower === "gemini-1.5-flash") return 100;
         if (lower.includes("1.5-flash-8b")) return 95;
         if (lower === "gemini-2.0-flash") return 90;

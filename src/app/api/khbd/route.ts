@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     let infrastructureLevel = "";
     let teacherSuggestions = "";
     let apiKey = "";
-    let model = "";
+    let model = "gemini-3.5-flash";
     let integrateAI = false;
 
     if (contentType.includes("multipart/form-data")) {
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
       integrateAI = integrateAIRaw !== null ? integrateAIRaw === "true" : Boolean(aiCodes && aiCodes.length > 0);
 
       apiKey = (formData.get("apiKey") as string) || "";
-      model = (formData.get("model") as string) || "";
+      model = (formData.get("model") as string) || "gemini-3.5-flash";
     } else {
       const body = await req.json();
       mon = body.mon || body.subject || "Tin học";
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
       aiCodes = body.aiCodes || [];
       integrateAI = typeof body.integrateAI === "boolean" ? body.integrateAI : Boolean(aiCodes && aiCodes.length > 0);
       apiKey = body.apiKey || "";
-      model = body.model || "";
+      model = body.model || "gemini-3.5-flash";
 
       if (body.fileBase64 && body.fileName) {
         fileObj = {
