@@ -158,9 +158,19 @@ function cleanPreserveLines(s) {
     .join("\n");
 }
 
+// ---- Viết thường 2 ký tự bất kỳ theo sau từ "GV" hoặc "HS"
+function lowercaseAfterActor(text) {
+  if (!text) return "";
+  return String(text).replace(/\b(GV|HS)(\s*[:\-–]?\s*)([^\s])([^\s])?/gu, (match, actor, sep, c1, c2) => {
+    const lowerC1 = c1 ? c1.toLowerCase() : "";
+    const lowerC2 = c2 ? c2.toLowerCase() : "";
+    return actor + sep + lowerC1 + lowerC2;
+  });
+}
+
 // ---- Phân tích và tách các câu/dòng hoạt động thông minh, xử lý tên bài tập không có dấu "-" ở trước
 function parseStepLines(rawText) {
-  let s = String(rawText ?? "").trim();
+  let s = lowercaseAfterActor(rawText).trim();
   if (!s) return [];
 
   // 1. Tiền xử lý ngắt dòng khi các câu bị viết dính liền trên 1 dòng:
@@ -271,11 +281,34 @@ const dashLine = (text, o = {}) => {
     ...o,
   });
 };
-const empty = () =>
-  new Paragraph({
+const empty = () => {
+  const p = new Paragraph({
     spacing: { line: 276, lineRule: LineRuleType.EXACTLY, before: 0, after: 0 },
     children: [run("")],
   });
+  p.__isEmpty = true;
+  return p;
+};
+
+function isEmptyParagraph(p) {
+  if (!p) return true;
+  if (p.__isEmpty) return true;
+  try {
+    const root = p.root;
+    if (Array.isArray(root)) {
+      for (const item of root) {
+        if (item && item.root && Array.isArray(item.root)) {
+          for (const sub of item.root) {
+            if (typeof sub === "string" && sub.trim()) return false;
+            if (sub && typeof sub.text === "string" && sub.text.trim()) return false;
+          }
+        }
+      }
+      return true;
+    }
+  } catch {}
+  return false;
+}
 
 function normalizeActivityName(raw) {
   let name = clean(raw).replace(/^\d+[.)]\s*/, "");
@@ -504,6 +537,30 @@ function buildDoc(d0, opts = {}) {
         console.log(`  [Cặp ${sIdx + 1}] n_gv=${n_gv}, n_hs=${n_hs} -> cân bằng (0 đoạn trống)`);
       }
     });
+
+    // Nếu cùng cả ở 2 cột hoạt động của GV và Hoạt động của học sinh có khoảng trống xuống dòng như nhau, hãy xóa khoảng trống đều cả 2 bên.
+    let scanIdx = 0;
+    while (scanIdx < gvChildren.length && scanIdx < hsChildren.length) {
+      if (isEmptyParagraph(gvChildren[scanIdx]) && isEmptyParagraph(hsChildren[scanIdx])) {
+        gvChildren.splice(scanIdx, 1);
+        hsChildren.splice(scanIdx, 1);
+        console.log(`  [Dọn dẹp khoảng trống] Đã xóa khoảng trống xuống dòng trùng nhau ở cả 2 cột tại vị trí dòng ${scanIdx + 1}`);
+      } else {
+        scanIdx++;
+      }
+    }
+
+    // Xóa khoảng trống dư thừa ở cuối hoạt động nếu cả 2 bên đều có
+    while (
+      gvChildren.length > 0 &&
+      hsChildren.length > 0 &&
+      isEmptyParagraph(gvChildren[gvChildren.length - 1]) &&
+      isEmptyParagraph(hsChildren[hsChildren.length - 1])
+    ) {
+      gvChildren.pop();
+      hsChildren.pop();
+      console.log(`  [Dọn dẹp khoảng trống] Đã xóa khoảng trống xuống dòng dư thừa ở cuối hoạt động`);
+    }
 
     const isLastActivity = hIdx === hds.length - 1;
     const bottomBorder = isLastActivity ? B : NONE;

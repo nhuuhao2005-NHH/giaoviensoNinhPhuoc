@@ -50,8 +50,17 @@ function ensureDash(text: string): string {
   return `- ${content}`;
 }
 
+function lowercaseAfterActor(text: string): string {
+  if (!text) return "";
+  return text.replace(/\b(GV|HS)(\s*[:\-–]?\s*)([^\s])([^\s])?/gu, (match, actor, sep, c1, c2) => {
+    const lowerC1 = c1 ? c1.toLowerCase() : "";
+    const lowerC2 = c2 ? c2.toLowerCase() : "";
+    return actor + sep + lowerC1 + lowerC2;
+  });
+}
+
 function renderStepContent(text: string) {
-  let s = (text || "").trim();
+  let s = lowercaseAfterActor(text || "").trim();
   if (!s) return null;
 
   // 1. Tiền xử lý ngắt dòng thông minh khi các câu bị viết dính liền trên 1 dòng
