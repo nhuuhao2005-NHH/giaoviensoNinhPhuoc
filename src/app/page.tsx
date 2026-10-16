@@ -46,6 +46,18 @@ interface PreviewActivity {
   steps: PreviewStep[];
 }
 
+interface ModelInfo {
+  id: string;
+  name: string;
+  displayName: string;
+  description: string;
+  supportedGenerationMethods: string[];
+  inputTokenLimit: number;
+  outputTokenLimit: number;
+  isFlash: boolean;
+  isPro: boolean;
+}
+
 function normalizeActor(line: string, actor: "GV" | "HS"): string {
   let s = (line || "").trim();
   if (!s) return "";
@@ -263,6 +275,37 @@ export default function HomePage() {
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [showKeyPassword, setShowKeyPassword] = useState(false);
   const [keySavedNotification, setKeySavedNotification] = useState(false);
+  const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [modelsError, setModelsError] = useState("");
+
+  const fetchGoogleModels = async (keyToUse?: string) => {
+    const key = (keyToUse ?? apiKey).trim();
+    if (!key) {
+      setModelsError("Vui lòng dán mã API Key trước khi truy vấn.");
+      return;
+    }
+    setIsLoadingModels(true);
+    setModelsError("");
+    try {
+      const res = await fetch("/api/models", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: key }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Không thể kết nối đến Google API.");
+      }
+      setAvailableModels(data.models || []);
+    } catch (err: any) {
+      setModelsError(err?.message || "Lỗi truy vấn danh sách model.");
+      setAvailableModels([]);
+    } finally {
+      setIsLoadingModels(false);
+    }
+  };
 
   // Output & Loading states
   const [loading, setLoading] = useState(false);
@@ -297,7 +340,14 @@ export default function HomePage() {
 
   useEffect(() => {
     const savedKey = localStorage.getItem("gemini_api_key");
-    if (savedKey) setApiKey(savedKey);
+    if (savedKey) {
+      setApiKey(savedKey);
+      fetchGoogleModels(savedKey);
+    }
+    const savedModel = localStorage.getItem("preferred_model");
+    if (savedModel) {
+      setSelectedModel(savedModel);
+    }
   }, []);
 
   const handleSaveApiKey = (key: string) => {
@@ -305,8 +355,13 @@ export default function HomePage() {
     setApiKey(trimmed);
     if (trimmed) {
       localStorage.setItem("gemini_api_key", trimmed);
+      fetchGoogleModels(trimmed);
     } else {
       localStorage.removeItem("gemini_api_key");
+      setAvailableModels([]);
+    }
+    if (selectedModel) {
+      localStorage.setItem("preferred_model", selectedModel);
     }
     setKeySavedNotification(true);
     setTimeout(() => {
@@ -432,6 +487,7 @@ export default function HomePage() {
       formData.append("aiCodes", JSON.stringify(aiCodes));
       formData.append("integrateAI", String(integrateAI));
       if (apiKey) formData.append("apiKey", apiKey);
+      if (selectedModel) formData.append("model", selectedModel);
 
       const res = await fetch("/api/khbd", {
         method: "POST",
@@ -561,11 +617,24 @@ export default function HomePage() {
 
           {/* Bên phải: Nút Cài API Key (vàng) & Nút Link lấy API Key (đỏ) */}
           <div className="flex items-center space-x-2 sm:space-x-3">
+            {/* Hiển thị số lượng model Google sẵn sàng */}
+            {availableModels.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowKeyModal(true)}
+                className="hidden md:inline-flex items-center space-x-1.5 px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-lg shadow-xs hover:bg-emerald-100 transition"
+                title="Bấm để xem danh sách mô hình Google AI sẵn sàng tạo nội dung"
+              >
+                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                <span>{availableModels.length} Model Google sẵn sàng</span>
+              </button>
+            )}
+
             {/* Nút Cài API Key (màu vàng) */}
             <button
               onClick={() => setShowKeyModal(true)}
               className="flex items-center space-x-1.5 px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-lg bg-amber-400 hover:bg-amber-500 text-amber-950 shadow-sm transition active:scale-[0.98]"
-              title="Cài đặt Google Gemini API Key"
+              title="Cài đặt Google Gemini API Key và kiểm tra model khả dụng"
             >
               <Key className="w-4 h-4 text-amber-900" />
               <span>{apiKey ? "Đã có API Key" : "Cài API Key"}</span>
@@ -586,14 +655,14 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* MODAL CÀI ĐẶT API KEY */}
+      {/* MODAL CÀI ĐẶT API KEY & KIỂM TRA MODEL GOOGLE */}
       {showKeyModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-slate-900 flex items-center space-x-2">
                 <Key className="w-5 h-5 text-amber-600" />
-                <span>Cài đặt Gemini API Key</span>
+                <span>Cài đặt &amp; Kiểm tra Gemini API Key</span>
               </h3>
               <button
                 onClick={() => setShowKeyModal(false)}
@@ -603,7 +672,7 @@ export default function HomePage() {
               </button>
             </div>
             <p className="text-sm text-slate-600 mb-3">
-              Dán mã Google Gemini API Key của bạn vào đây. Khóa sẽ được lưu an toàn trên trình duyệt của máy bạn:
+              Dán mã Google Gemini API Key để hệ thống tự động truy vấn trực tiếp danh sách mô hình đang tồn tại và sẵn sàng tạo nội dung:
             </p>
 
             {apiKey && (
@@ -613,7 +682,11 @@ export default function HomePage() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setApiKey("")}
+                  onClick={() => {
+                    setApiKey("");
+                    setAvailableModels([]);
+                    setModelsError("");
+                  }}
                   className="text-red-600 hover:text-red-800 text-xs font-semibold flex items-center space-x-1"
                   title="Xóa khóa cũ để dán khóa mới"
                 >
@@ -641,10 +714,100 @@ export default function HomePage() {
               </button>
             </div>
 
+            {/* NÚT TRUY VẤN TRỰC TIẾP GOOGLE API */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+              <button
+                type="button"
+                onClick={() => fetchGoogleModels(apiKey)}
+                disabled={!apiKey || isLoadingModels}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition flex items-center justify-center space-x-1.5 disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isLoadingModels ? "animate-spin" : ""}`} />
+                <span>{isLoadingModels ? "Đang truy vấn Google API..." : "Truy vấn trực tiếp danh sách Model từ Google API"}</span>
+              </button>
+
+              {availableModels.length > 0 && (
+                <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-1 rounded border border-emerald-200 flex items-center space-x-1">
+                  <Check className="w-3 h-3 text-emerald-600" />
+                  <span>{availableModels.length} Model khả dụng</span>
+                </span>
+              )}
+            </div>
+
+            {/* BÁO LỖI NẾU CÓ */}
+            {modelsError && (
+              <div className="mb-3 p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs space-y-1">
+                <p className="font-bold flex items-center space-x-1">
+                  <span>✕ Phản hồi từ Google API:</span>
+                </p>
+                <p>{modelsError}</p>
+              </div>
+            )}
+
+            {/* DANH SÁCH CÁC MODEL THỰC SỰ TỒN TẠI VÀ SẴN SÀNG TẠO NỘI DUNG */}
+            {availableModels.length > 0 && (
+              <div className="mb-4 p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800 flex items-center space-x-1.5">
+                    <Bot className="w-4 h-4 text-blue-600" />
+                    <span>Mô hình sử dụng để tạo kế hoạch bài dạy:</span>
+                  </label>
+                  <span className="text-[11px] text-emerald-700 font-semibold bg-emerald-100/70 px-1.5 py-0.5 rounded">
+                    Trực tiếp từ Google AI
+                  </span>
+                </div>
+
+                <select
+                  value={selectedModel}
+                  onChange={(e) => {
+                    setSelectedModel(e.target.value);
+                    if (e.target.value) {
+                      localStorage.setItem("preferred_model", e.target.value);
+                    } else {
+                      localStorage.removeItem("preferred_model");
+                    }
+                  }}
+                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                >
+                  <option value="">-- Tự động chọn model tối ưu nhất (Khuyên dùng: 1.5-Flash) --</option>
+                  {availableModels.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.id} {m.isFlash ? "⚡ (Flash - Ổn định)" : m.isPro ? "🧠 (Pro)" : ""} — Sẵn sàng tạo nội dung
+                    </option>
+                  ))}
+                </select>
+
+                <div className="text-[11px] text-slate-500 font-medium pt-1">
+                  Các mô hình đang kích hoạt trên API Key này (hỗ trợ <code>generateContent</code>):
+                </div>
+                <div className="max-h-36 overflow-y-auto space-y-1 pr-1 bg-white p-2 rounded-lg border border-slate-200">
+                  {availableModels.map((m) => (
+                    <div
+                      key={m.id}
+                      className="flex items-center justify-between py-1 px-1.5 hover:bg-slate-50 rounded text-[11px]"
+                    >
+                      <div className="flex items-center space-x-1.5">
+                        <span className="font-mono font-semibold text-slate-800">{m.id}</span>
+                        {m.isFlash && (
+                          <span className="px-1.5 py-0.2 bg-amber-100 text-amber-800 text-[10px] rounded font-medium">
+                            Flash
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-emerald-700 font-semibold text-[10px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 flex items-center space-x-1">
+                        <Check className="w-2.5 h-2.5 text-emerald-600" />
+                        <span>Sẵn sàng tạo</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {keySavedNotification && (
               <div className="mb-3 p-2.5 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-lg text-xs flex items-center space-x-2 font-medium animate-pulse">
                 <Check className="w-4 h-4 text-emerald-600" />
-                <span>Đã lưu khóa API thành công vào trình duyệt!</span>
+                <span>Đã lưu khóa API &amp; mô hình thành công vào trình duyệt!</span>
               </div>
             )}
 

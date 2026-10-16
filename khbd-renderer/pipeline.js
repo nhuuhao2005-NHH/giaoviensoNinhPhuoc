@@ -17,13 +17,16 @@ const FALLBACK_MODELS = [
   "gemini-2.0-flash-lite-preview-02-05",
 ];
 
-// Tự động truy vấn Google AI Studio xem API Key này hỗ trợ những model nào (tránh lỗi 404 Not Found)
+// Tự động truy vấn trực tiếp Google API với chính API Key của thầy/cô để lấy danh sách các model sẵn sàng tạo nội dung
 async function getAvailableModels(apiKey) {
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`, {
+      cache: "no-store",
+    });
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data?.models)) {
+        // Lọc chính xác các model đang thực sự tồn tại và sẵn sàng tạo nội dung (generateContent)
         const supported = data.models
           .filter(
             (m) =>
@@ -31,10 +34,21 @@ async function getAvailableModels(apiKey) {
               m.supportedGenerationMethods.includes("generateContent")
           )
           .map((m) => m.name.replace(/^models\//, ""));
-        if (supported.length > 0) return supported;
+        if (supported.length > 0) {
+          console.log(`[khbd-pipeline] Đã truy vấn Google API thành công! Có ${supported.length} model sẵn sàng tạo nội dung: ${supported.slice(0, 5).join(", ")}...`);
+          return supported;
+        }
       }
+    } else {
+      const errData = await res.json().catch(() => null);
+      const errMsg = errData?.error?.message || "";
+      if (errMsg.includes("API key not valid") || errMsg.includes("API_KEY_INVALID")) {
+        throw new Error("Khóa Gemini API Key không hợp lệ. Vui lòng kiểm tra lại mã API trong nút 'Cài API Key'.");
+      }
+      console.warn(`[khbd-pipeline] Google API ListModels báo lỗi (${res.status}): ${errMsg}`);
     }
   } catch (err) {
+    if (err.message && err.message.includes("API Key không hợp lệ")) throw err;
     console.warn("[khbd-pipeline] Không thể gọi ListModels tự động:", err?.message);
   }
   return [];
@@ -94,8 +108,8 @@ async function processKhbd(file, options) {
   const discovered = await getAvailableModels(apiKey);
   const candidateModels = discovered.length > 0 ? rankModels(discovered) : FALLBACK_MODELS;
 
-  // Nếu người dùng có đặt biến môi trường GEMINI_MODEL, ưu tiên lên đầu
-  const preferredModel = process.env.GEMINI_MODEL;
+  // Nếu giáo viên có chỉ định model cụ thể (hoặc qua biến môi trường), ưu tiên lên đầu
+  const preferredModel = options.model || options.preferredModel || process.env.GEMINI_MODEL;
   const modelsToUse = preferredModel
     ? [preferredModel, ...candidateModels.filter((m) => m !== preferredModel)]
     : candidateModels;
